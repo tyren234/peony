@@ -1,7 +1,7 @@
 # 🏰 Waterdeep Watchtower – Rejestr Postępów Realizacji (ZAI 26Z)
 
 > **Zasada pracy:** Małe, czytelne kroki (do ~100–300 linii kodu na krok), dokładny review każdego etapu przed przejściem dalej.  
-> **Aktualny stan:** Krok 1 ukończony – oczekuje na review.
+> **Aktualny stan:** Krok 2 ukończony – oczekuje na review.
 
 ---
 
@@ -9,8 +9,8 @@
 
 | Krok | Zakres | Rozmiar | Status | Opis |
 |:---:|---|:---:|:---:|---|
-| **Krok 1** | **Fundament:** Konfiguracja, Połączenie SQLite i endpoint `/api/health` | ~97 linii | 🔍 **GOTOWE DO REVIEW** | Środowisko, pydantic-settings, silnik SQLite z obsługą kluczy obcych, aplikacja FastAPI, nagłówek nosniff |
-| **Krok 2** | **Modele SQL:** Tabele bazy danych | ~120 linii | ⏹️ Oczekuje | Modele SQLAlchemy: `users`, `user_tokens`, `series`, `sensors`, `measurements` z indeksami |
+| **Krok 1** | **Fundament:** Konfiguracja, Połączenie SQLite i endpoint `/api/health` | ~97 linii | ✅ **ZATWIERDZONY** | Środowisko, pydantic-settings, silnik SQLite z obsługą kluczy obcych, aplikacja FastAPI, nagłówek nosniff |
+| **Krok 2** | **Modele SQL:** Tabele bazy danych | ~80 linii | 🔍 **GOTOWE DO REVIEW** | Modele SQLAlchemy: `users`, `user_tokens`, `series`, `sensors`, `measurements` z indeksami |
 | **Krok 3** | **Bezpieczeństwo & RFC 9457:** Haszowanie i obsługa błędów | ~140 linii | ⏹️ Oczekuje | Haszowanie haseł Argon2id, klucze API SHA-256, format błędów `application/problem+json` |
 | **Krok 4** | **Autoryzacja (`/api/auth`):** Zarządzanie sesją | ~120 linii | ⏹️ Oczekuje | Endpointy `/login`, `/logout`, `/password`, Bearer tokeny, unieważnianie sesji |
 | **Krok 5** | **Zarządzanie Seriami (`/api/series`):** CRUD serii | ~130 linii | ⏹️ Oczekuje | Tworzenie serii (201+Location), odczyt publiczny, walidacja i blokada 409 Conflict |
@@ -56,3 +56,23 @@ uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --reload
 # Sprawdzenie endpointu:
 curl -i http://127.0.0.1:8000/api/health
 ```
+
+---
+
+## 🔍 Krok 2 – Szczegóły Zrealizowanego Kodu (~80 linii modeli + testy)
+
+Pliki w repozytorium utworzone w ramach Kroku 2:
+
+1. **`backend/app/models.py`** (~80 linii):
+   * `User`: administrator aplikacji (`id`, `username`, `password_hash`, `created_at`, relacja `tokens`).
+   * `UserToken`: sesje i unieważnialne Bearer tokeny (`id`, `token`, `user_id`, `expires_at`, `created_at`).
+   * `Series`: serie pomiarowe (`id`, `name`, `min_value`, `max_value`, `color`, `icon`, `unit`, `created_at`).
+   * `Sensor`: czujniki IoT (`id`, `name`, `series_id`, `api_key_hash`, `created_at`, `last_measurement_at`).
+   * `Measurement`: odczyty telemetrii (`id`, `series_id`, `sensor_id`, `value`, `timestamp`) z indeksem kompozytowym `(series_id, timestamp)` pod szybkie zapytania zakresowe.
+   * Reguły kaskadowe:
+     * Usunięcie serii usuwa kaskadowo jej czujniki i pomiary (`cascade="all, delete-orphan"`).
+     * Wyrejestrowanie czujnika zachowuje zebrane pomiary (`sensor_id` ustawiane na `NULL` – wymóg kontraktu API).
+2. **`backend/app/main.py`**:
+   * Zaimportowano `backend.app.models`, aby tabele rejestrowały się w `Base.metadata` przed wywołaniem `create_all()`.
+3. **`tests/test_models.py`** (~140 linii):
+   * 4 testy weryfikujące: tworzenie użytkownika i sesji, tworzenie serii/czujnika/pomiaru, kaskadowe usuwanie serii, zachowanie pomiarów po wyrejestrowaniu czujnika.

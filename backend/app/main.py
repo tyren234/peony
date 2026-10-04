@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, Response
 from backend.app.config import settings
 from backend.app.database import engine, Base
+import backend.app.models  # noqa: F401 - rejestracja modeli w Base.metadata
 
 @asynccontextmanager # we 
 async def lifespan(app: FastAPI):
