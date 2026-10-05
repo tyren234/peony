@@ -5,6 +5,9 @@ from sqlalchemy.orm import sessionmaker
 from backend.app.database import Base
 from backend.app.models import User, UserToken, Series, Sensor, Measurement, utc_now
 
+"""
+Testy sprawdzające czy różne tabele się dobrze tworzą i czy obiekty dobrze się inicjalizują
+"""
 
 @pytest.fixture
 def db_session():
@@ -152,13 +155,13 @@ def test_sensor_delete_retains_measurements(db_session):
     )
     db_session.add(measurement)
     db_session.commit()
-    m_id = measurement.id
+    measurement_id = measurement.id
 
     # Usunięcie czujnika nie usuwa pomiaru – sensor_id staje się None (kontrakt API)
     db_session.delete(sensor)
     db_session.commit()
 
-    retained_m = db_session.query(Measurement).filter_by(id=m_id).first()
-    assert retained_m is not None
-    assert retained_m.sensor_id is None
-    assert retained_m.value == 1013.25
+    retained_measurement = db_session.query(Measurement).filter_by(id=measurement_id).first()
+    assert retained_measurement is not None
+    assert retained_measurement.sensor_id is None
+    assert retained_measurement.value == 1013.25

@@ -1,7 +1,8 @@
 # 🏰 Waterdeep Watchtower – Rejestr Postępów Realizacji (ZAI 26Z)
 
-> **Zasada pracy:** Małe, czytelne kroki (do ~100–300 linii kodu na krok), dokładny review każdego etapu przed przejściem dalej.  
-> **Aktualny stan:** Krok 2 ukończony – oczekuje na review.
+> **Zasada pracy:** Małe, czytelne kroki (do ~100–300 linii kodu na krok), dokładny review każdego etapu przed przejściem dalej.
+> **Zasada czystego kodu i nazewnictwa:** Bezwzględny zakaz stosowania jednoliterowych skrótów i niejasnych akronimów w nazwach zmiennych (np. `retained_measurement` zamiast `retained_m`, `measurement_id` zamiast `m_id`, `media_type` zamiast `m`). Czytelność i pełne, samoopisujące się nazwy są priorytetem.  
+> **Aktualny stan:** Krok 3 ukończony – oczekuje na review.
 
 ---
 
@@ -10,8 +11,8 @@
 | Krok | Zakres | Rozmiar | Status | Opis |
 |:---:|---|:---:|:---:|---|
 | **Krok 1** | **Fundament:** Konfiguracja, Połączenie SQLite i endpoint `/api/health` | ~97 linii | ✅ **ZATWIERDZONY** | Środowisko, pydantic-settings, silnik SQLite z obsługą kluczy obcych, aplikacja FastAPI, nagłówek nosniff |
-| **Krok 2** | **Modele SQL:** Tabele bazy danych | ~80 linii | 🔍 **GOTOWE DO REVIEW** | Modele SQLAlchemy: `users`, `user_tokens`, `series`, `sensors`, `measurements` z indeksami |
-| **Krok 3** | **Bezpieczeństwo & RFC 9457:** Haszowanie i obsługa błędów | ~140 linii | ⏹️ Oczekuje | Haszowanie haseł Argon2id, klucze API SHA-256, format błędów `application/problem+json` |
+| **Krok 2** | **Modele SQL:** Tabele bazy danych | ~80 linii | ✅ **ZATWIERDZONY** | Modele SQLAlchemy: `users`, `user_tokens`, `series`, `sensors`, `measurements` z indeksami |
+| **Krok 3** | **Bezpieczeństwo & RFC 9457:** Haszowanie i obsługa błędów | ~140 linii | 🔍 **GOTOWE DO REVIEW** | Haszowanie haseł Argon2id, klucze API SHA-256, format błędów `application/problem+json` |
 | **Krok 4** | **Autoryzacja (`/api/auth`):** Zarządzanie sesją | ~120 linii | ⏹️ Oczekuje | Endpointy `/login`, `/logout`, `/password`, Bearer tokeny, unieważnianie sesji |
 | **Krok 5** | **Zarządzanie Seriami (`/api/series`):** CRUD serii | ~130 linii | ⏹️ Oczekuje | Tworzenie serii (201+Location), odczyt publiczny, walidacja i blokada 409 Conflict |
 | **Krok 6** | **Zarządzanie Czujnikami (`/api/sensors`):** Rejestracja czujników | ~110 linii | ⏹️ Oczekuje | Rejestracja z jednorazowym kluczem API, wyrejestrowanie (204) bez usuwania pomiarów |
@@ -76,3 +77,25 @@ Pliki w repozytorium utworzone w ramach Kroku 2:
    * Zaimportowano `backend.app.models`, aby tabele rejestrowały się w `Base.metadata` przed wywołaniem `create_all()`.
 3. **`tests/test_models.py`** (~140 linii):
    * 4 testy weryfikujące: tworzenie użytkownika i sesji, tworzenie serii/czujnika/pomiaru, kaskadowe usuwanie serii, zachowanie pomiarów po wyrejestrowaniu czujnika.
+
+---
+
+## 🔍 Krok 3 – Szczegóły Zrealizowanego Kodu (~140 linii)
+
+Pliki w repozytorium utworzone/zaktualizowane w ramach Kroku 3:
+
+1. **`backend/app/security.py`** (35 linii):
+   * `hash_password(password)`: Haszowanie Argon2id z automatyczną kryptograficzną solą.
+   * `verify_password(plain, hashed)`: Bezpieczna weryfikacja haseł odporna na ataki czasowe.
+   * `generate_api_key()`: Generowanie losowych kluczy API (min. 32 znaki, format url-safe).
+   * `hash_api_key(api_key)`: Wyliczanie skrótu SHA-256 klucza API do zapisu w bazie.
+   * `generate_access_token()`: Generowanie kryptograficznych Bearer tokenów sesji.
+2. **`backend/app/errors.py`** (105 linii):
+   * `ProblemException`: Dedykowany wyjątek aplikacyjny z polami zgodnymi z RFC 9457 (`title`, `status`, `detail`, `instance`, `errors`).
+   * `create_problem_response(...)`: Generator odpowiedzi z nagłówkiem `Content-Type: application/problem+json`.
+   * Handlery wyjątków: `problem_exception_handler`, `http_exception_handler`, `validation_exception_handler` (rozróżniający błędy składniowe 400 od semantycznych 422).
+3. **`backend/app/main.py`**:
+   * Podpięcie globalnych handlerów błędów.
+   * Middleware walidujący nagłówek `Accept` (blokada niezgodnych formatów kodem 406 Not Acceptable) oraz `Content-Type` (wymuszenie JSON kodem 415 Unsupported Media Type).
+4. **`tests/test_security.py`** & **`tests/test_errors.py`**:
+   * 6 nowych testów weryfikujących poprawność Argon2id, SHA-256, format błędów RFC 9457, kody 404, 406 i 415. Łącznie w projekcie: 11/11 testów przechodzi.
