@@ -3,7 +3,7 @@
 > **Zasada pracy:** Małe, czytelne kroki (do ~100–300 linii kodu na krok), dokładny review każdego etapu przed przejściem dalej.
 > **Zasada czystego kodu i nazewnictwa:** Bezwzględny zakaz stosowania jednoliterowych skrótów i niejasnych akronimów w nazwach zmiennych (np. `retained_measurement` zamiast `retained_m`, `measurement_id` zamiast `m_id`, `media_type` zamiast `m`). Czytelność i pełne, samoopisujące się nazwy są priorytetem.
 > **Język komunikatów API i błędów:** Wszystkie komunikaty błędów, szczegóły (`detail`), tytuły i opisy zwracane przez API (w tym wyjątki RFC 9457 Problem Details) muszą być bezwzględnie w języku angielskim.  
-> **Aktualny stan:** Krok 6 zatwierdzony. Przechodzimy do Kroku 7 (Pomiary telemetrii /api/measurements).
+> **Aktualny stan:** Krok 7 zatwierdzony. Przechodzimy do Kroku 8 (Generator CLI & Zasilenie Danymi: F13 & F11).
 
 ---
 
@@ -17,7 +17,7 @@
 | **Krok 4** | **Autoryzacja (`/api/auth`):** Zarządzanie sesją | ~120 linii | ✅ **ZATWIERDZONY** | Endpointy `/login`, `/logout`, `/password`, Bearer tokeny, unieważnianie sesji |
 | **Krok 5** | **Zarządzanie Seriami (`/api/series`):** CRUD serii | ~170 linii | ✅ **ZATWIERDZONY** | Tworzenie serii (201+Location), odczyt publiczny, walidacja i blokada 409 Conflict |
 | **Krok 6** | **Zarządzanie Czujnikami (`/api/sensors`):** Rejestracja czujników | ~160 linii | ✅ **ZATWIERDZONY** | Rejestracja z jednorazowym kluczem API, wyrejestrowanie (204) bez usuwania pomiarów |
-| **Krok 7** | **Pomiary (`/api/measurements`):** Telemetria | ~150 linii | ⏹️ Oczekuje | Zapis z nagłówkiem `X-API-Key`, odczyt z filtrami (`series`, `from`, `to`, `sort`, `limit`) |
+| **Krok 7** | **Pomiary (`/api/measurements`):** Telemetria | ~260 linii | ✅ **ZATWIERDZONY** | Zapis z nagłówkiem `X-API-Key`, odczyt z filtrami (`series`, `from`, `to`, `sort`, `limit`) |
 | **Krok 8** | **Generator CLI & Zasilenie Danymi:** F13 & F11 | ~180 linii | ⏹️ Oczekuje | Emulator czujników CLI oraz skrypt zasilający 6 bogatych serii po min. 15 pomiarów |
 
 ---
@@ -176,3 +176,31 @@ Pliki w repozytorium utworzone/zaktualizowane w ramach Kroku 6:
      * Test bezpieczeństwa przed wyciekiem danych poufnych (`apiKeyHash`, `password`, `hash`).
      * Wyrejestrowanie czujnika (204) i asercja zachowania pomiarów z `sensor_id = None`.
    * Łącznie w projekcie: 53/53 testów przechodzi pomyślnie.
+
+---
+
+## 🔍 Krok 7 – Szczegóły Zrealizowanego Kodu (~260 linii backendu + testy)
+
+Pliki w repozytorium utworzone/zaktualizowane w ramach Kroku 7:
+
+1. **`backend/app/schemas/measurements.py`** (22 linie):
+   * `MeasurementInput`: Pydantic model przyjmujący `value: float` oraz opcjonalne `timestamp: Optional[datetime]` (brak serii w ciele – seria wynika bezpośrednio z klucza czujnika).
+   * `MeasurementResponse`: Pełny model odpowiedzi (`id`, `seriesId`, `sensorId`, `value`, `timestamp`) w formacie camelCase.
+2. **`backend/app/routers/measurements.py`** (238 linii):
+   * `POST /api/measurements`: Zapis wyniku telemetrii. Weryfikacja nagłówka `X-API-Key` (porównanie SHA-256 z bazą). Odrzucenie bez klucza, ze złym kluczem lub z samym tokenem administratora kodem `401 Unauthorized`. Walidacja wartości względem przedziału `[minValue, maxValue]` serii (kod `422 Unprocessable Entity` przy wykroczeniu poza zakres). Walidacja znacznika czasu (blokada dat > 5 minut w przyszłość kodem 422; daty przeszłe dozwolone). Aktualizacja `Sensor.last_measurement_at`, nagłówek `Location: /api/measurements/{id}` i status `201 Created`.
+   * `GET /api/measurements`: Publiczny odczyt wyników. Filtrowanie po wielu seriach (`?series=1,3`), domkniętym przedziale czasu (`from <= timestamp <= to`), sortowaniu (`sort=timestamp` lub `sort=-timestamp`) oraz limicie liczby wyników (`limit`). Bezpieczne parsowanie dat ISO 8601 w query stringach ze znakami `+` / spacjami oraz obsługa błędów formatu kodem `400 Bad Request`.
+   * `GET /api/measurements/{measurementId}`: Publiczny odczyt pojedynczego wyniku po ID (kod `200 OK` lub `404 Not Found`).
+   * Zabezpieczenie przed modyfikacją: blokada PUT/PATCH/DELETE (kody 404/405 zgodnie z kontraktem).
+3. **`backend/app/main.py`**:
+   * Zarejestrowano `measurements_router`.
+4. **`tests/test_measurements.py`** (297 linii):
+   * Parametryzacja uwierzytelniania czujnika (brak klucza, pusty klucz, zły klucz, token administratora zwracają 401).
+   * Parametryzacja walidacji wyniku (poprawne wartości, granice 0.0 i 100.0, czasy przeszłe -> 201; wartości poniżej min, powyżej max, czas > 5 minut w przyszłość -> 422).
+   * Kompleksowy test filtrów GET (domyślne sortowanie rosnące, sort=-timestamp malejące, filtr pojedynczej serii, filtr wielu serii, filtr zakresu od-do).
+   * Parametryzacja błędnych parametrów query (`from=nie-data`, `to=nie-data`, `series=abc`, `sort=invalid`, błędny limit -> 400).
+   * Odczyt po ID (200 i 404).
+   * Parametryzacja blokady modyfikacji i usuwania wyników (PUT, PATCH, DELETE zwracają 404 lub 405).
+   * Dedykowany test zniekształconych ciał JSON (`value: "abc"`, pusty `{}` i `timestamp: "wczoraj"` zwracają 422).
+   * Bezpośrednia weryfikacja poprawności odczytu zasobu spod zwróconego nagłówka `Location`.
+   * Wdrożono pakiet `httpx2` eliminujący ostrzeżenia biblioteki Starlette (brak filtrów ostrzeżeń).
+   * Łącznie w projekcie: 78/78 testów przechodzi pomyślnie (0 warnings).
