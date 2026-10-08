@@ -16,6 +16,7 @@ from backend.app.errors import (
     generic_exception_handler,
 )
 from backend.app.routers.auth import router as auth_router
+from backend.app.routers.series import series_router
 
 
 def init_default_user_account() -> None:
@@ -97,6 +98,7 @@ async def api_headers_and_security_middleware(request: Request, call_next) -> Re
 
 # Rejestracja routerów API
 app.include_router(auth_router)
+app.include_router(series_router)
 
 
 @app.get("/api/health", tags=["system"], summary="Health check")

@@ -26,15 +26,16 @@ class ProblemException(Exception):
 
     def __init__(
         self,
-        status_code: int,
+        status_code: Optional[int] = None,
         title: Optional[str] = None,
         detail: Optional[str] = None,
         errors: Optional[List[dict[str, str]]] = None,
         type_: str = "about:blank",
         headers: Optional[dict[str, str]] = None,
+        status: Optional[int] = None,
     ):
-        self.status_code = status_code
-        self.title = title or DEFAULT_TITLES.get(status_code, "Error")
+        self.status_code = status_code if status_code is not None else (status or 500)
+        self.title = title or DEFAULT_TITLES.get(self.status_code, "Error")
         self.detail = detail
         self.errors = errors
         self.type_ = type_

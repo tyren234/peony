@@ -3,7 +3,7 @@
 > **Zasada pracy:** Małe, czytelne kroki (do ~100–300 linii kodu na krok), dokładny review każdego etapu przed przejściem dalej.
 > **Zasada czystego kodu i nazewnictwa:** Bezwzględny zakaz stosowania jednoliterowych skrótów i niejasnych akronimów w nazwach zmiennych (np. `retained_measurement` zamiast `retained_m`, `measurement_id` zamiast `m_id`, `media_type` zamiast `m`). Czytelność i pełne, samoopisujące się nazwy są priorytetem.
 > **Język komunikatów API i błędów:** Wszystkie komunikaty błędów, szczegóły (`detail`), tytuły i opisy zwracane przez API (w tym wyjątki RFC 9457 Problem Details) muszą być bezwzględnie w języku angielskim.  
-> **Aktualny stan:** Krok 4 zatwierdzony. Przechodzimy do Kroku 5 (Zarządzanie Seriami).
+> **Aktualny stan:** Krok 5 zatwierdzony. Przechodzimy do Kroku 6 (Zarządzanie Czujnikami).
 
 ---
 
@@ -15,7 +15,7 @@
 | **Krok 2** | **Modele SQL:** Tabele bazy danych | ~80 linii | ✅ **ZATWIERDZONY** | Modele SQLAlchemy: `users`, `user_tokens`, `series`, `sensors`, `measurements` z indeksami |
 | **Krok 3** | **Bezpieczeństwo & RFC 9457:** Haszowanie i obsługa błędów | ~140 linii | ✅ **ZATWIERDZONY** | Haszowanie haseł Argon2id, klucze API SHA-256, format błędów `application/problem+json` |
 | **Krok 4** | **Autoryzacja (`/api/auth`):** Zarządzanie sesją | ~120 linii | ✅ **ZATWIERDZONY** | Endpointy `/login`, `/logout`, `/password`, Bearer tokeny, unieważnianie sesji |
-| **Krok 5** | **Zarządzanie Seriami (`/api/series`):** CRUD serii | ~130 linii | ⏹️ Oczekuje | Tworzenie serii (201+Location), odczyt publiczny, walidacja i blokada 409 Conflict |
+| **Krok 5** | **Zarządzanie Seriami (`/api/series`):** CRUD serii | ~170 linii | ✅ **ZATWIERDZONY** | Tworzenie serii (201+Location), odczyt publiczny, walidacja i blokada 409 Conflict |
 | **Krok 6** | **Zarządzanie Czujnikami (`/api/sensors`):** Rejestracja czujników | ~110 linii | ⏹️ Oczekuje | Rejestracja z jednorazowym kluczem API, wyrejestrowanie (204) bez usuwania pomiarów |
 | **Krok 7** | **Pomiary (`/api/measurements`):** Telemetria | ~150 linii | ⏹️ Oczekuje | Zapis z nagłówkiem `X-API-Key`, odczyt z filtrami (`series`, `from`, `to`, `sort`, `limit`) |
 | **Krok 8** | **Generator CLI & Zasilenie Danymi:** F13 & F11 | ~180 linii | ⏹️ Oczekuje | Emulator czujników CLI oraz skrypt zasilający 6 bogatych serii po min. 15 pomiarów |
@@ -124,3 +124,29 @@ Pliki w repozytorium utworzone/zaktualizowane w ramach Kroku 4:
    * Obsługa generycznych błędów 500 w standardzie RFC 9457 oraz egzekwowanie kluczy obcych `PRAGMA foreign_keys=ON;` w bazach SQLite.
 5. **`tests/test_auth.py`** (120 linii):
    * 6 nowych testów pokrywających: poprawne logowanie, błędne hasło (401), nieistniejącego użytkownika (401), wylogowanie i unieważnienie tokenu (204 i 401), brak tokenu (401), cykl zmiany hasła wraz z kodem 403 i walidacją 422. Łącznie w projekcie: 17/17 testów przechodzi pomyślnie.
+
+---
+
+## 🔍 Krok 5 – Szczegóły Zrealizowanego Kodu (~170 linii backendu + testy)
+
+Pliki w repozytorium utworzone/zaktualizowane w ramach Kroku 5:
+
+1. **`backend/app/schemas/series.py`** (27 linii):
+   * `SeriesInput`: Pydantic model dla tworzenia/edycji serii (`name`, `minValue`, `maxValue`, `color`, opcjonalne `icon`, `unit`). Walidator `@model_validator` egzekwujący regułę `minValue < maxValue` (kod 422 przy niespełnieniu).
+   * `SeriesResponse`: Model odpowiedzi rozszerzony o pole `id` z pełną serializacją nazw w formacie camelCase (`minValue`, `maxValue`).
+2. **`backend/app/routers/series.py`** (145 linii):
+   * `GET /api/series`: Publiczna lista wszystkich serii (kod `200 OK`).
+   * `POST /api/series`: Tworzenie nowej serii (wymaga autoryzacji `get_current_user`), zwraca nagłówek `Location: /api/series/{id}` oraz kod `201 Created`.
+   * `GET /api/series/{seriesId}`: Publiczny odczyt pojedynczej serii po ID (kod `200 OK` lub `404 Not Found` w formacie RFC 9457).
+   * `PUT /api/series/{seriesId}`: Aktualizacja serii (wymaga autoryzacji). Zabezpieczenie przed sprzecznością danych: zwraca kod `409 Conflict`, jeśli nowy przedział `[minValue, maxValue]` wyklucza jakiekolwiek istniejące pomiary przypisane do serii.
+   * `DELETE /api/series/{seriesId}`: Kaskadowe usunięcie serii wraz z jej czujnikami i pomiarami (wymaga autoryzacji, kod `204 No Content`).
+3. **`backend/app/main.py`**:
+   * Zarejestrowano `series_router`.
+4. **`tests/test_series.py`** (~300 linii):
+   * Testy parametryzowane (`@pytest.mark.parametrize`) z pełnym przypisaniem wartości do zmiennych:
+     * Parametryzacja żądań nieautoryzowanych (POST, PUT, DELETE bez tokenu zwracają 401).
+     * Parametryzacja tworzenia serii (poprawne pełne i minimalne dane zwracają 201 + `Location`, natomiast `minValue == maxValue`, `minValue > maxValue`, brak # w kolorze, zła długość HEX, pusta nazwa zwracają 422).
+     * Odczyt po ID (200 i 404) oraz pełna edycja parametrów serii.
+     * Parametryzacja granic przedziału przy edycji PUT (konflikt 409 vs sukces 200 w zależności od relacji nowego przedziału do istniejącego pomiaru w bazie).
+     * Kaskadowe usuwanie serii z bazy (204 No Content).
+   * Łącznie w projekcie: 37/37 testów przechodzi pomyślnie.
