@@ -3,7 +3,7 @@
 > **Zasada pracy:** Małe, czytelne kroki (do ~100–300 linii kodu na krok), dokładny review każdego etapu przed przejściem dalej.
 > **Zasada czystego kodu i nazewnictwa:** Bezwzględny zakaz stosowania jednoliterowych skrótów i niejasnych akronimów w nazwach zmiennych (np. `retained_measurement` zamiast `retained_m`, `measurement_id` zamiast `m_id`, `media_type` zamiast `m`). Czytelność i pełne, samoopisujące się nazwy są priorytetem.
 > **Język komunikatów API i błędów:** Wszystkie komunikaty błędów, szczegóły (`detail`), tytuły i opisy zwracane przez API (w tym wyjątki RFC 9457 Problem Details) muszą być bezwzględnie w języku angielskim.  
-> **Aktualny stan:** Krok 5 zatwierdzony. Przechodzimy do Kroku 6 (Zarządzanie Czujnikami).
+> **Aktualny stan:** Krok 6 zatwierdzony. Przechodzimy do Kroku 7 (Pomiary telemetrii /api/measurements).
 
 ---
 
@@ -16,7 +16,7 @@
 | **Krok 3** | **Bezpieczeństwo & RFC 9457:** Haszowanie i obsługa błędów | ~140 linii | ✅ **ZATWIERDZONY** | Haszowanie haseł Argon2id, klucze API SHA-256, format błędów `application/problem+json` |
 | **Krok 4** | **Autoryzacja (`/api/auth`):** Zarządzanie sesją | ~120 linii | ✅ **ZATWIERDZONY** | Endpointy `/login`, `/logout`, `/password`, Bearer tokeny, unieważnianie sesji |
 | **Krok 5** | **Zarządzanie Seriami (`/api/series`):** CRUD serii | ~170 linii | ✅ **ZATWIERDZONY** | Tworzenie serii (201+Location), odczyt publiczny, walidacja i blokada 409 Conflict |
-| **Krok 6** | **Zarządzanie Czujnikami (`/api/sensors`):** Rejestracja czujników | ~110 linii | ⏹️ Oczekuje | Rejestracja z jednorazowym kluczem API, wyrejestrowanie (204) bez usuwania pomiarów |
+| **Krok 6** | **Zarządzanie Czujnikami (`/api/sensors`):** Rejestracja czujników | ~160 linii | ✅ **ZATWIERDZONY** | Rejestracja z jednorazowym kluczem API, wyrejestrowanie (204) bez usuwania pomiarów |
 | **Krok 7** | **Pomiary (`/api/measurements`):** Telemetria | ~150 linii | ⏹️ Oczekuje | Zapis z nagłówkiem `X-API-Key`, odczyt z filtrami (`series`, `from`, `to`, `sort`, `limit`) |
 | **Krok 8** | **Generator CLI & Zasilenie Danymi:** F13 & F11 | ~180 linii | ⏹️ Oczekuje | Emulator czujników CLI oraz skrypt zasilający 6 bogatych serii po min. 15 pomiarów |
 
@@ -150,3 +150,29 @@ Pliki w repozytorium utworzone/zaktualizowane w ramach Kroku 5:
      * Parametryzacja granic przedziału przy edycji PUT (konflikt 409 vs sukces 200 w zależności od relacji nowego przedziału do istniejącego pomiaru w bazie).
      * Kaskadowe usuwanie serii z bazy (204 No Content).
    * Łącznie w projekcie: 37/37 testów przechodzi pomyślnie.
+
+---
+
+## 🔍 Krok 6 – Szczegóły Zrealizowanego Kodu (~160 linii backendu + testy)
+
+Pliki w repozytorium utworzone/zaktualizowane w ramach Kroku 6:
+
+1. **`backend/app/schemas/sensors.py`** (27 linii):
+   * `SensorInput`: Model Pydantic z polami `name` (1-100 znaków) oraz `seriesId`.
+   * `SensorResponse`: Model odpowiedzi dla listy i odczytu czujnika (`id`, `name`, `seriesId`, `createdAt`, `lastMeasurementAt`). Ścisła izolacja: nie zawiera skrótu `apiKeyHash` ani jawnego klucza.
+   * `SensorCreatedResponse`: Rozszerzenie `SensorResponse` o pole `apiKey` (jawny klucz zwracany jednorazowo wyłącznie przy rejestracji).
+2. **`backend/app/routers/sensors.py`** (132 linie):
+   * `GET /api/sensors`: Lista wszystkich zarejestrowanych czujników (wymaga autoryzacji, kod `200 OK`).
+   * `POST /api/sensors`: Rejestracja czujnika (wymaga autoryzacji). Weryfikacja istnienia serii (kod `422 Unprocessable Entity` przy nieistniejącym `seriesId`). Generowanie losowego klucza API, zapis skrótu SHA-256 w bazie danych, nagłówek `Location: /api/sensors/{id}` i zwrot jednorazowego klucza (kod `201 Created`).
+   * `GET /api/sensors/{sensorId}`: Pobranie szczegółów czujnika po ID (kod `200 OK` lub `404 Not Found`).
+   * `DELETE /api/sensors/{sensorId}`: Wyrejestrowanie czujnika (kod `204 No Content`). Klucz przestaje działać, a zebrane wcześniej pomiary pozostają w bazie danych z `sensor_id = NULL` (zgodnie z kontraktem API).
+3. **`backend/app/main.py`**:
+   * Zarejestrowano `sensors_router`.
+4. **`tests/test_sensors.py`** (260 linii):
+   * Testy parametryzowane z wyeliminowaniem duplikacji literałów:
+     * Parametryzacja operacji nieautoryzowanych (GET, POST, GET/{id}, DELETE bez tokenu zwracają 401).
+     * Rozszerzona parametryzacja walidacji rejestracji (poprawna 201 + `Location`, nieistniejąca seria 422, pusta nazwa 422, za długa nazwa 422, brak `name` 422, brak `seriesId` 422, nieliczbowy `seriesId` 422).
+     * Parametryzacja operacji na nieistniejących identyfikatorach (GET i DELETE zwracają 404 Not Found w RFC 9457).
+     * Test bezpieczeństwa przed wyciekiem danych poufnych (`apiKeyHash`, `password`, `hash`).
+     * Wyrejestrowanie czujnika (204) i asercja zachowania pomiarów z `sensor_id = None`.
+   * Łącznie w projekcie: 53/53 testów przechodzi pomyślnie.
