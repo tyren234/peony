@@ -88,16 +88,32 @@ def get_measurements(
                 Measurement.series_id.in_(parsed_series_identifiers)
             )
 
-    # 2. Filtrowanie po czasie początkowym: from <= timestamp
+    # 2. Parsowanie i walidacja przedziału czasowego: from <= timestamp <= to
+    normalized_from_time: Optional[datetime] = None
     if from_time is not None:
         normalized_from_time = parse_query_datetime(from_time, "from")
+
+    normalized_to_time: Optional[datetime] = None
+    if to_time is not None:
+        normalized_to_time = parse_query_datetime(to_time, "to")
+
+    if (
+        normalized_from_time is not None
+        and normalized_to_time is not None
+        and normalized_from_time > normalized_to_time
+    ):
+        raise ProblemException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            title="Bad Request",
+            detail="Parameter 'from' must be earlier than or equal to 'to'.",
+        )
+
+    if normalized_from_time is not None:
         measurements_query = measurements_query.filter(
             Measurement.timestamp >= normalized_from_time
         )
 
-    # 3. Filtrowanie po czasie końcowym: timestamp <= to
-    if to_time is not None:
-        normalized_to_time = parse_query_datetime(to_time, "to")
+    if normalized_to_time is not None:
         measurements_query = measurements_query.filter(
             Measurement.timestamp <= normalized_to_time
         )
@@ -203,8 +219,12 @@ def create_measurement(
     )
     database_session.add(new_measurement)
 
-    # Aktualizacja znacznika ostatniego pomiaru w czujniku
-    found_sensor.last_measurement_at = measurement_timestamp
+    # Aktualizacja znacznika ostatniego pomiaru w czujniku (z zachowaniem najnowszego czasu)
+    if (
+        found_sensor.last_measurement_at is None
+        or measurement_timestamp > ensure_utc(found_sensor.last_measurement_at)
+    ):
+        found_sensor.last_measurement_at = measurement_timestamp
 
     database_session.commit()
     database_session.refresh(new_measurement)

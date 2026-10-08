@@ -202,5 +202,7 @@ Pliki w repozytorium utworzone/zaktualizowane w ramach Kroku 7:
    * Parametryzacja blokady modyfikacji i usuwania wyników (PUT, PATCH, DELETE zwracają 404 lub 405).
    * Dedykowany test zniekształconych ciał JSON (`value: "abc"`, pusty `{}` i `timestamp: "wczoraj"` zwracają 422).
    * Bezpośrednia weryfikacja poprawności odczytu zasobu spod zwróconego nagłówka `Location`.
+   * Walidacja logiczna parametrów zakresu czasu (`from <= to`): próba zapytania z `from > to` zwraca czytelny błąd RFC 9457 `400 Bad Request`.
+   * Ochrona przed cofaniem `sensor.last_measurement_at` podczas rejestracji pomiarów historycznych (zachowuje maksimum z dotychczasowego i nowego pomiaru).
    * Wdrożono pakiet `httpx2` eliminujący ostrzeżenia biblioteki Starlette (brak filtrów ostrzeżeń).
-   * Łącznie w projekcie: 78/78 testów przechodzi pomyślnie (0 warnings).
+   * Łącznie w projekcie: 80/80 testów przechodzi pomyślnie (0 warnings).

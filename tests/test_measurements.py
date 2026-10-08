@@ -177,8 +177,7 @@ def test_create_measurement_malformed_payloads_parametrized(
 
 
 def test_get_measurements_filtering_and_sorting(client: TestClient):
-    """Verify series query filtering, closed timestamp intervals, and sorting orders."""
-    # 1. Tworzymy dwie osobne serie i czujniki
+    """Verify series query filtering, closed timestamp intervals, sorting orders, and limit."""
     first_series_id, unused_first_sensor_id, first_api_key = setup_series_and_sensor(client)
     second_series_id, unused_second_sensor_id, second_api_key = setup_series_and_sensor(client)
 
@@ -206,7 +205,7 @@ def test_get_measurements_filtering_and_sorting(client: TestClient):
         headers={"X-API-Key": first_api_key},
     )
 
-    # Test 1: Pobranie wszystkich pomiarów (domyślnie sort=timestamp rosnąco)
+    # Test 1a: Pobranie wszystkich pomiarów (domyślnie sort=timestamp rosnąco)
     all_response = client.get("/api/measurements")
     assert all_response.status_code == 200
     all_items = all_response.json()
@@ -214,6 +213,14 @@ def test_get_measurements_filtering_and_sorting(client: TestClient):
     assert all_items[0]["value"] == 10.0
     assert all_items[1]["value"] == 20.0
     assert all_items[2]["value"] == 30.0
+
+    # Test 1b: Jawne sortowanie rosnące sort=timestamp
+    explicit_asc_response = client.get("/api/measurements?sort=timestamp")
+    assert explicit_asc_response.status_code == 200
+    explicit_asc_items = explicit_asc_response.json()
+    assert len(explicit_asc_items) == 3
+    assert explicit_asc_items[0]["value"] == 10.0
+    assert explicit_asc_items[2]["value"] == 30.0
 
     # Test 2: Sortowanie malejące sort=-timestamp
     descending_response = client.get("/api/measurements?sort=-timestamp")
@@ -245,6 +252,27 @@ def test_get_measurements_filtering_and_sorting(client: TestClient):
     assert range_items[0]["value"] == 10.0
     assert range_items[1]["value"] == 20.0
 
+    # Test 6: Domkniętość przedziału w pojedynczym punkcie (from == to)
+    exact_point_query = (
+        f"/api/measurements?from={first_timestamp.isoformat()}&to={first_timestamp.isoformat()}"
+    )
+    exact_point_response = client.get(exact_point_query)
+    assert exact_point_response.status_code == 200
+    exact_items = exact_point_response.json()
+    assert len(exact_items) == 1
+    assert exact_items[0]["value"] == 10.0
+
+    # Test 7: Ograniczenie liczby wyników parametrem limit
+    limit_response = client.get("/api/measurements?limit=2")
+    assert limit_response.status_code == 200
+    assert len(limit_response.json()) == 2
+
+    # Test 8: Pusty zakres czasu w odległej przyszłości
+    empty_future_query = "/api/measurements?from=2030-01-01T00:00:00Z&to=2030-01-02T00:00:00Z"
+    empty_response = client.get(empty_future_query)
+    assert empty_response.status_code == 200
+    assert empty_response.json() == []
+
 
 @pytest.mark.parametrize(
     "invalid_query_parameter",
@@ -255,6 +283,8 @@ def test_get_measurements_filtering_and_sorting(client: TestClient):
         "sort=niepoprawne_sortowanie",
         "limit=0",
         "limit=999999",
+        # Odwrócony przedział czasowy: from > to
+        "from=2026-01-02T10:00:00Z&to=2026-01-01T10:00:00Z",
     ],
 )
 def test_get_measurements_invalid_query_parameters_return_400(
@@ -265,6 +295,42 @@ def test_get_measurements_invalid_query_parameters_return_400(
     response = client.get(f"/api/measurements?{invalid_query_parameter}")
     assert response.status_code == 400
     assert response.headers["content-type"].startswith("application/problem+json")
+
+
+def test_sensor_last_measurement_at_retains_maximum_time(client: TestClient):
+    """Ensure sensor lastMeasurementAt retains the newest timestamp and does not regress on historical data."""
+    auth_token = get_authenticated_bearer_token(client)
+    series_id, sensor_id, api_key = setup_series_and_sensor(client)
+
+    newer_time = datetime(2026, 5, 1, 12, 0, 0, tzinfo=timezone.utc)
+    older_historical_time = datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+
+    # 1. Zapis nowego pomiaru
+    client.post(
+        "/api/measurements",
+        json={"value": 50.0, "timestamp": newer_time.isoformat()},
+        headers={"X-API-Key": api_key},
+    )
+    sensor_response_after_newer = client.get(
+        f"/api/sensors/{sensor_id}",
+        headers={"Authorization": f"Bearer {auth_token}"},
+    )
+    assert sensor_response_after_newer.status_code == 200
+    assert "2026-05-01" in sensor_response_after_newer.json()["lastMeasurementAt"]
+
+    # 2. Dosłanie pomiaru z przeszłości (starszego)
+    client.post(
+        "/api/measurements",
+        json={"value": 40.0, "timestamp": older_historical_time.isoformat()},
+        headers={"X-API-Key": api_key},
+    )
+    sensor_response_after_older = client.get(
+        f"/api/sensors/{sensor_id}",
+        headers={"Authorization": f"Bearer {auth_token}"},
+    )
+    assert sensor_response_after_older.status_code == 200
+    # Znacznik nie powinien się cofnąć do stycznia:
+    assert "2026-05-01" in sensor_response_after_older.json()["lastMeasurementAt"]
 
 
 def test_get_measurement_by_id(client: TestClient):
