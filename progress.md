@@ -1,8 +1,9 @@
 # 🏰 Waterdeep Watchtower – Rejestr Postępów Realizacji (ZAI 26Z)
 
 > **Zasada pracy:** Małe, czytelne kroki (do ~100–300 linii kodu na krok), dokładny review każdego etapu przed przejściem dalej.
-> **Zasada czystego kodu i nazewnictwa:** Bezwzględny zakaz stosowania jednoliterowych skrótów i niejasnych akronimów w nazwach zmiennych (np. `retained_measurement` zamiast `retained_m`, `measurement_id` zamiast `m_id`, `media_type` zamiast `m`). Czytelność i pełne, samoopisujące się nazwy są priorytetem.  
-> **Aktualny stan:** Krok 3 ukończony – oczekuje na review.
+> **Zasada czystego kodu i nazewnictwa:** Bezwzględny zakaz stosowania jednoliterowych skrótów i niejasnych akronimów w nazwach zmiennych (np. `retained_measurement` zamiast `retained_m`, `measurement_id` zamiast `m_id`, `media_type` zamiast `m`). Czytelność i pełne, samoopisujące się nazwy są priorytetem.
+> **Język komunikatów API i błędów:** Wszystkie komunikaty błędów, szczegóły (`detail`), tytuły i opisy zwracane przez API (w tym wyjątki RFC 9457 Problem Details) muszą być bezwzględnie w języku angielskim.  
+> **Aktualny stan:** Krok 4 zatwierdzony. Przechodzimy do Kroku 5 (Zarządzanie Seriami).
 
 ---
 
@@ -12,8 +13,8 @@
 |:---:|---|:---:|:---:|---|
 | **Krok 1** | **Fundament:** Konfiguracja, Połączenie SQLite i endpoint `/api/health` | ~97 linii | ✅ **ZATWIERDZONY** | Środowisko, pydantic-settings, silnik SQLite z obsługą kluczy obcych, aplikacja FastAPI, nagłówek nosniff |
 | **Krok 2** | **Modele SQL:** Tabele bazy danych | ~80 linii | ✅ **ZATWIERDZONY** | Modele SQLAlchemy: `users`, `user_tokens`, `series`, `sensors`, `measurements` z indeksami |
-| **Krok 3** | **Bezpieczeństwo & RFC 9457:** Haszowanie i obsługa błędów | ~140 linii | 🔍 **GOTOWE DO REVIEW** | Haszowanie haseł Argon2id, klucze API SHA-256, format błędów `application/problem+json` |
-| **Krok 4** | **Autoryzacja (`/api/auth`):** Zarządzanie sesją | ~120 linii | ⏹️ Oczekuje | Endpointy `/login`, `/logout`, `/password`, Bearer tokeny, unieważnianie sesji |
+| **Krok 3** | **Bezpieczeństwo & RFC 9457:** Haszowanie i obsługa błędów | ~140 linii | ✅ **ZATWIERDZONY** | Haszowanie haseł Argon2id, klucze API SHA-256, format błędów `application/problem+json` |
+| **Krok 4** | **Autoryzacja (`/api/auth`):** Zarządzanie sesją | ~120 linii | ✅ **ZATWIERDZONY** | Endpointy `/login`, `/logout`, `/password`, Bearer tokeny, unieważnianie sesji |
 | **Krok 5** | **Zarządzanie Seriami (`/api/series`):** CRUD serii | ~130 linii | ⏹️ Oczekuje | Tworzenie serii (201+Location), odczyt publiczny, walidacja i blokada 409 Conflict |
 | **Krok 6** | **Zarządzanie Czujnikami (`/api/sensors`):** Rejestracja czujników | ~110 linii | ⏹️ Oczekuje | Rejestracja z jednorazowym kluczem API, wyrejestrowanie (204) bez usuwania pomiarów |
 | **Krok 7** | **Pomiary (`/api/measurements`):** Telemetria | ~150 linii | ⏹️ Oczekuje | Zapis z nagłówkiem `X-API-Key`, odczyt z filtrami (`series`, `from`, `to`, `sort`, `limit`) |
@@ -99,3 +100,27 @@ Pliki w repozytorium utworzone/zaktualizowane w ramach Kroku 3:
    * Middleware walidujący nagłówek `Accept` (blokada niezgodnych formatów kodem 406 Not Acceptable) oraz `Content-Type` (wymuszenie JSON kodem 415 Unsupported Media Type).
 4. **`tests/test_security.py`** & **`tests/test_errors.py`**:
    * 6 nowych testów weryfikujących poprawność Argon2id, SHA-256, format błędów RFC 9457, kody 404, 406 i 415. Łącznie w projekcie: 11/11 testów przechodzi.
+
+---
+
+## 🔍 Krok 4 – Szczegóły Zrealizowanego Kodu (~120 linii)
+
+Pliki w repozytorium utworzone/zaktualizowane w ramach Kroku 4:
+
+1. **`backend/app/schemas/auth.py`** (18 linii):
+   * `LoginRequest`: Walidacja pól `username` i `password`.
+   * `LoginResponse`: Zwracanie pól `accessToken`, `tokenType: "Bearer"` oraz `expiresIn: 86400`.
+   * `PasswordChangeRequest`: Wymóg `currentPassword` oraz `newPassword` o długości minimum 8 znaków.
+2. **`backend/app/dependencies.py`** (38 linii):
+   * Zależność `get_current_user`: Walidacja nagłówka `Authorization: Bearer <token>`, sprawdzanie istnienia tokenu w tabeli `user_tokens` oraz weryfikacja daty ważności (`expires_at > utc_now()`). Obsługa stref czasowych UTC (`ensure_utc`).
+3. **`backend/app/routers/auth.py`** (95 linii):
+   * `POST /api/auth/login`: Weryfikacja hasła Argon2id, generowanie tokenu sesji i zapis do bazy z czasem wygaśnięcia 24h.
+   * `POST /api/auth/logout`: Usunięcie tokenu z bazy danych (kod `204 No Content`), unieważniające sesję.
+   * `PUT /api/auth/password`: Sprawdzenie bieżącego hasła (kod `403 Forbidden` przy błędzie), zhaszowanie nowego hasła i aktualizacja profilu administratora.
+4. **`backend/app/main.py`**:
+   * Rejestracja routera `auth_router`.
+   * Funkcja `init_default_user_account`: Automatyczne utworzenie konta administratora z konfiguracji (`settings.default_user_username` / `settings.default_user_password`) przy starcie aplikacji.
+   * Mitygacja ataków czasowych (timing-attack) przez `verify_dummy_password` dla nieistniejących użytkowników.
+   * Obsługa generycznych błędów 500 w standardzie RFC 9457 oraz egzekwowanie kluczy obcych `PRAGMA foreign_keys=ON;` w bazach SQLite.
+5. **`tests/test_auth.py`** (120 linii):
+   * 6 nowych testów pokrywających: poprawne logowanie, błędne hasło (401), nieistniejącego użytkownika (401), wylogowanie i unieważnienie tokenu (204 i 401), brak tokenu (401), cykl zmiany hasła wraz z kodem 403 i walidacją 422. Łącznie w projekcie: 17/17 testów przechodzi pomyślnie.

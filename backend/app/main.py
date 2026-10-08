@@ -4,21 +4,42 @@ from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from backend.app.config import settings
-from backend.app.database import engine, Base
-import backend.app.models  # noqa: F401 - rejestracja modeli w Base.metadata
+from backend.app.database import engine, Base, SessionLocal
+import backend.app.models
+from backend.app.security import hash_password
 from backend.app.errors import (
     ProblemException,
     create_problem_response,
     problem_exception_handler,
     http_exception_handler,
     validation_exception_handler,
+    generic_exception_handler,
 )
+from backend.app.routers.auth import router as auth_router
+
+
+def init_default_user_account() -> None:
+    """Inicjalizuje domyślne konto użytkownika z konfiguracji jeśli nie istnieje."""
+    with SessionLocal() as database_session:
+        existing_user = (
+            database_session.query(backend.app.models.User)
+            .filter_by(username=settings.default_user_username)
+            .first()
+        )
+        if not existing_user:
+            default_user = backend.app.models.User(
+                username=settings.default_user_username,
+                password_hash=hash_password(settings.default_user_password),
+            )
+            database_session.add(default_user)
+            database_session.commit()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Inicjalizacja bazy danych przy starcie
+    # Inicjalizacja bazy danych i konta użytkownika przy starcie
     Base.metadata.create_all(bind=engine)
+    init_default_user_account()
     yield
 
 
@@ -34,10 +55,11 @@ app = FastAPI(
 app.add_exception_handler(ProblemException, problem_exception_handler)
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(Exception, generic_exception_handler)
 
 
 @app.middleware("http")
-async def api_headers_and_security_middleware(request: Request, call_next):
+async def api_headers_and_security_middleware(request: Request, call_next) -> Response:
     # 1. Walidacja formatów dla endpointów /api/*
     if request.url.path.startswith("/api/"):
         # Weryfikacja nagłówka Accept (kontrakt: 406 Not Acceptable)
@@ -50,7 +72,7 @@ async def api_headers_and_security_middleware(request: Request, call_next):
                 return create_problem_response(
                     status_code=406,
                     title="Not Acceptable",
-                    detail="Serwer obsługuje wyłącznie formaty JSON (application/json).",
+                    detail="Server only supports JSON formats (application/json).",
                     instance=request.url.path,
                 )
 
@@ -61,7 +83,7 @@ async def api_headers_and_security_middleware(request: Request, call_next):
                 return create_problem_response(
                     status_code=415,
                     title="Unsupported Media Type",
-                    detail="Wymagany nagłówek Content-Type: application/json.",
+                    detail="Content-Type header must be application/json.",
                     instance=request.url.path,
                 )
 
@@ -73,7 +95,11 @@ async def api_headers_and_security_middleware(request: Request, call_next):
     return response
 
 
-@app.get("/api/health", tags=["system"])
-def health_check():
-    """Endpoint sprawdzający stan dostępności aplikacji (liveness probe)."""
+# Rejestracja routerów API
+app.include_router(auth_router)
+
+
+@app.get("/api/health", tags=["system"], summary="Health check")
+def health_check() -> dict[str, str]:
+    """Liveness probe verifying application availability."""
     return {"status": "ok"}

@@ -4,6 +4,9 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+# Kompatybilność z nowym nazewnictwem kodów w Starlette / RFC 9110
+HTTP_422_STATUS = getattr(status, "HTTP_422_UNPROCESSABLE_CONTENT", 422)
+
 DEFAULT_TITLES = {
     400: "Bad Request",
     401: "Unauthorized",
@@ -116,12 +119,12 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     status_code = (
         status.HTTP_400_BAD_REQUEST
         if is_syntax_or_query_error
-        else status.HTTP_422_UNPROCESSABLE_ENTITY
+        else HTTP_422_STATUS
     )
     detail = (
-        "Niepoprawne zapytanie lub parametry."
+        "Invalid request syntax or query parameters."
         if is_syntax_or_query_error
-        else "Błąd walidacji danych wejściowych."
+        else "Input validation error."
     )
 
     return create_problem_response(
@@ -130,4 +133,14 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         detail=detail,
         instance=request.url.path,
         errors=errors,
+    )
+
+
+async def generic_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Obsługuje nieoczekiwane błędy 500 bez ujawniania stacktrace w odpowiedzi."""
+    return create_problem_response(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        title="Internal Server Error",
+        detail="An unexpected internal server error occurred.",
+        instance=request.url.path,
     )

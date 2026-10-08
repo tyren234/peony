@@ -1,6 +1,7 @@
 from datetime import datetime, timezone, timedelta
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
+from sqlalchemy.pool import StaticPool
 from sqlalchemy.orm import sessionmaker
 from backend.app.database import Base
 from backend.app.models import User, UserToken, Series, Sensor, Measurement, utc_now
@@ -11,15 +12,26 @@ Testy sprawdzające czy różne tabele się dobrze tworzą i czy obiekty dobrze 
 
 @pytest.fixture
 def db_session():
-    """Tworzy czystą bazę w pamięci SQLite dla każdego testu modeli."""
-    engine = create_engine("sqlite:///:memory:") # memory będzie tylko w pamięci ram, nie nadyskou
+    """Tworzy czystą bazę w pamięci SQLite dla każdego testu modeli z włączonymi kluczami obcymi."""
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+
+    @event.listens_for(engine, "connect")
+    def set_sqlite_pragma(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
     Base.metadata.create_all(bind=engine)
-    TestingSessionLocal = sessionmaker(bind=engine)
-    session = TestingSessionLocal()
+    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    database_session = TestingSessionLocal()
     try:
-        yield session
+        yield database_session
     finally:
-        session.close()
+        database_session.close()
         Base.metadata.drop_all(bind=engine)
 
 

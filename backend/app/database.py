@@ -1,5 +1,6 @@
+from typing import Generator
 from sqlalchemy import create_engine, event
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from backend.app.config import settings
 
 connect_args = {}
@@ -20,12 +21,13 @@ if "sqlite" in settings.database_url:
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.close()
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine) # Fabryka sesji na póżniej
-Base = declarative_base() # base model, którego używamy potem do tabel
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
 
-def get_db():
-    db = SessionLocal()
+
+def get_db() -> Generator[Session, None, None]:
+    database_session = SessionLocal()
     try:
-        yield db
+        yield database_session
     finally:
-        db.close()
+        database_session.close()

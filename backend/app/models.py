@@ -12,9 +12,16 @@ from sqlalchemy.orm import relationship
 from backend.app.database import Base
 
 
-def utc_now():
+def utc_now() -> datetime:
     """Zwraca bieżący czas w formacie UTC."""
     return datetime.now(timezone.utc)
+
+
+def ensure_utc(target_datetime: datetime) -> datetime:
+    """Upewnia się, że obiekt datetime posiada strefę czasową UTC (dla kompatybilności z SQLite)."""
+    if target_datetime.tzinfo is None:
+        return target_datetime.replace(tzinfo=timezone.utc)
+    return target_datetime.astimezone(timezone.utc)
 
 
 class User(Base):
