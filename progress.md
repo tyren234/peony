@@ -3,7 +3,7 @@
 > **Zasada pracy:** Małe, czytelne kroki (do ~100–300 linii kodu na krok), dokładny review każdego etapu przed przejściem dalej.
 > **Zasada czystego kodu i nazewnictwa:** Bezwzględny zakaz stosowania jednoliterowych skrótów i niejasnych akronimów w nazwach zmiennych (np. `retained_measurement` zamiast `retained_m`, `measurement_id` zamiast `m_id`, `media_type` zamiast `m`). Czytelność i pełne, samoopisujące się nazwy są priorytetem.
 > **Język komunikatów API i błędów:** Wszystkie komunikaty błędów, szczegóły (`detail`), tytuły i opisy zwracane przez API (w tym wyjątki RFC 9457 Problem Details) muszą być bezwzględnie w języku angielskim.  
-> **Aktualny stan:** Krok 7 zatwierdzony. Przechodzimy do Kroku 8 (Generator CLI & Zasilenie Danymi: F13 & F11).
+> **Aktualny stan:** Krok 8 zatwierdzony. Etap E1 w 100% zrealizowany (10/10 pkt w zai-tests.mjs, 95/95 testów pytest).
 
 ---
 
@@ -18,7 +18,7 @@
 | **Krok 5** | **Zarządzanie Seriami (`/api/series`):** CRUD serii | ~170 linii | ✅ **ZATWIERDZONY** | Tworzenie serii (201+Location), odczyt publiczny, walidacja i blokada 409 Conflict |
 | **Krok 6** | **Zarządzanie Czujnikami (`/api/sensors`):** Rejestracja czujników | ~160 linii | ✅ **ZATWIERDZONY** | Rejestracja z jednorazowym kluczem API, wyrejestrowanie (204) bez usuwania pomiarów |
 | **Krok 7** | **Pomiary (`/api/measurements`):** Telemetria | ~260 linii | ✅ **ZATWIERDZONY** | Zapis z nagłówkiem `X-API-Key`, odczyt z filtrami (`series`, `from`, `to`, `sort`, `limit`) |
-| **Krok 8** | **Generator CLI & Zasilenie Danymi:** F13 & F11 | ~180 linii | ⏹️ Oczekuje | Emulator czujników CLI oraz skrypt zasilający 6 bogatych serii po min. 15 pomiarów |
+| **Krok 8** | **Generator CLI & Zasilenie Danymi:** F13 & F11 | ~260 linii | ✅ **ZATWIERDZONY** | Emulator czujników CLI (F13, F4, T11), seeder 6 serii Waterdeep (F11), formatowanie dat ISO UTC z Z |
 
 ---
 
@@ -206,3 +206,39 @@ Pliki w repozytorium utworzone/zaktualizowane w ramach Kroku 7:
    * Ochrona przed cofaniem `sensor.last_measurement_at` podczas rejestracji pomiarów historycznych (zachowuje maksimum z dotychczasowego i nowego pomiaru).
    * Wdrożono pakiet `httpx2` eliminujący ostrzeżenia biblioteki Starlette (brak filtrów ostrzeżeń).
    * Łącznie w projekcie: 80/80 testów przechodzi pomyślnie (0 warnings).
+
+---
+
+## 🔍 Krok 8 – Szczegóły Zrealizowanego Kodu (~260 linii generatora + testy)
+
+Pliki w repozytorium utworzone/zaktualizowane w ramach Kroku 8:
+
+1. **`generator/cli.py`** (~190 linii):
+   * Narzędzie konsolowe CLI dla emulatora czujników telemetrycznych (wymogi F13, F4, T11).
+   * Opcje wiersza poleceń: `--api`, `--key` (lub zmienna środowiskowa `SENSOR_API_KEY`), `--mode` (`sine`, `random`, `linear`, `constant`, `out-of-range`), `--min-value`, `--max-value`, `--constant-value`, `--count`, `--interval`, `--history`, `--step-minutes`.
+   * Tryb generowania na żywo ze stałym interwałem oraz tryb wsadowy historyczny ze znacznikami czasu wstecz.
+   * Obsługa wymogu F4: w przypadku odrzucenia wyniku (np. kod 422 przy wartości out-of-range) CLI wyświetla czytelny, wyczerpujący komunikat błędu RFC 9457 z pola `detail`.
+   * Dane wysyłane są wyłącznie przez HTTP `POST /api/measurements` z nagłówkiem `X-API-Key` (zakaz bezpośredniego zapisu do bazy).
+2. **`generator/seed_waterdeep.py`** (~180 linii):
+   * Skrypt zasilający bazę danymi demonstracyjnymi (wymóg F11).
+   * Obsługuje logowanie administratora, weryfikuje istnienie serii i w razie potrzeby rejestruje 6 kanonicznych serii Straży Miejskiej Waterdeep:
+     1. *Integralność Bariery Ahghairona* (`0.0 - 100.0 %`)
+     2. *Poziom hałasu na Targowisku Głównym* (`30.0 - 120.0 dB`)
+     3. *Temperatura w piecach Świątyni Gonda* (`20.0 - 1400.0 °C`)
+     4. *Niewyjaśnione zdarzenia magiczne* (`0.0 - 50.0 anomalii/h`)
+     5. *Goście w The Yawning Portal* (`5.0 - 250.0 osób`)
+     6. *Otwarte bramy miejskie* (`0.0 - 8.0 bram`)
+   * Dla każdej serii rejestruje sensor (`POST /api/sensors`), odbiera jednorazowy klucz API i przesyła po 20 historycznych pomiarów (łącznie 120 pomiarów przez API).
+   * Pełna idempotencja – ponowne uruchomienie nie duplikuje serii.
+3. **`backend/app/schemas/measurements.py`** & **`backend/app/schemas/sensors.py`**:
+   * Dodano walidatory `@field_validator(mode="before")` gwarantujące formatowanie znaczników czasu UTC z jawnym sufiksem `Z` (zapobiega błędnej interpretacji dat jako lokalnych w JavaScript / Node.js).
+4. **`tests/test_generator.py`** (~220 linii):
+   * 15 nowych testów jednostkowych i integracyjnych:
+     * Matematyczna weryfikacja wszystkich trybów generowania wartości (`sine`, `random`, `linear`, `constant`, `out-of-range`).
+     * Weryfikacja działania parsera argumentów CLI (domyślne oraz niestandardowe parametry).
+     * Integracja z API: wysłanie pojedynczego pomiaru (201), odrzucenie out-of-range (422 z RFC 9457), błędny klucz (401).
+     * Test wsadowego generatora historycznego (6 pomiarów weryfikowanych w bazie).
+     * Pełny test seedera: 6 serii x 20 pomiarów, weryfikacja odczytu z API oraz idempotencja.
+5. **Weryfikacja całościowa**:
+   * Pytest: **95/95 testów przechodzi pomyślnie** (0 warnings).
+   * Oficjalny skrypt kontraktu ZAI 26Z: `node docs/zai-tests.mjs --stage E1` zwraca **10/10 pkt** (24/24 testy zdane w 100%).
