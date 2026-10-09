@@ -18,7 +18,7 @@
 | **Krok E2.5** | **Filtrowanie Danych:** Filtry Serii i Zakresów Czasu | F5 | ✅ **ZATWIERDZONY** | Wybór serii (checkboxy), zakres `from`/`to`, szybkie filtry czasowe (1h, 24h, wszystko) |
 | **Krok E2.6** | **Panel Administratora:** CRUD Serii i Czujników | F3, F8, F12 | ✅ **ZATWIERDZONY** | Logowanie Bearer, tworzenie/usuwanie serii (min < max), rejestracja z jednorazowym kluczem API, unregister |
 | **Krok E2.7** | **Wydruk Raportu:** Stylizacja `@media print` | F7, B2 | ✅ **ZATWIERDZONY** | Czysty wydruk raportu z ukrytymi kontrolkami i formularzami |
-| **Krok E2.8** | **Bonusy:** WebSockets / SSE na żywo (+3 pkt) & Dane Pogodowe (+2 pkt) | Bonus (+5 pkt) | ⏹️ Oczekuje | Aktualizacja wykresu na żywo po odebraniu telemetrii z generatora oraz tryb pobierania danych z Open-Meteo |
+| **Krok E2.8** | **Bonusy:** WebSockets na żywo (+3 pkt) & Dane Pogodowe (+2 pkt) | Bonus (+5 pkt) | 🔄 W TRAKCIE | Zrealizowano WebSocket /ws/telemetry z rozgłaszaniem na żywo (+3 pkt). W trakcie: tryb Open-Meteo (+2 pkt). |
 | **Krok E2.9** | **Weryfikacja Końcowa:** Pełny audyt testów i dokumentacja | E2 (40 pkt + bonus) | ⏹️ Oczekuje | Uruchomienie `node docs/zai-tests.mjs --stage E2 --lighthouse`, nagranie demonstracyjne, dokumentacja PDF |
 
 ---
@@ -139,3 +139,19 @@ Pliki w repozytorium utworzone/zmodyfikowane:
 6. **Standardy jakości**:
    * **Zero jednoliterowych zmiennych** w całym kodzie źródłowym TypeScript/CSS/Python.
    * Wszystkie 96 testów pytest przechodzi w 100%.
+
+---
+
+## 🔍 Krok E2.8 – Transmisja Telemetrii na Żywo (WebSocket +3 pkt)
+
+1. **`backend/app/websocket_manager.py`**:
+   * Zaimplementowano moduł `TelemetryBroadcaster` zarządzający pulą aktywnych klientów WebSocket.
+   * Każdy nowy pomiar zapisany w `POST /api/measurements` jest asynchronicznie rozsyłany do wszystkich połączonych klientów.
+2. **`backend/app/main.py`**:
+   * Dodano endpoint WebSocket `GET /ws/telemetry`.
+   * Nagłówek CSP zezwala na bezpieczne połączenia `connect-src ws: wss:`.
+3. **`frontend/src/App.tsx` & `frontend/src/index.css`**:
+   * Frontend automatycznie nawiązuje połączenie WebSocket `ws://` / `wss://`.
+   * Nowe pomiary z emulatora trafiają bezpośrednio na wykres i do tabeli bez konieczności odświeżania.
+   * Naprawiono limit zapytań (zwiększono do 2000 z sortowaniem `-timestamp`), dzięki czemu przycisk "Odśwież" zawsze pobiera najświeższe odczyty.
+   * Dodano wskaźnik `🟢 Na żywo (WebSocket)`, czas ostatniej aktualizacji oraz opcję awaryjnego auto-odpytywania (4s).
