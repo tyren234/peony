@@ -71,15 +71,29 @@ pip install -r requirements.txt
 ```
 
 ### 2. Uruchomienie serwera backendowego (FastAPI / Uvicorn)
+
+#### Tryb standardowy HTTP (dla Etapu E1 i developmentu):
 ```bash
-# Uruchomienie serwera na porcie 8000 z auto-reloadem:
 uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
+
+#### Tryb bezpieczny HTTPS (wymóg Etapu E2):
+Aplikacja w grupie testów bezpieczeństwa E2 (`[A4]`) wymaga działania po protokole `https://`. Aby uruchomić bezpieczny serwer lokalnie:
+```bash
+# 1. Wygenerowanie lokalnego certyfikatu deweloperskiego (jeśli jeszcze nie istnieje):
+mkdir -p certs && openssl req -x509 -newkey rsa:2048 -keyout certs/key.pem -out certs/cert.pem -days 365 -nodes -subj '/CN=localhost'
+
+# 2. Uruchomienie serwera z obsługą SSL na porcie 8443:
+uvicorn backend.app.main:app --host 127.0.0.1 --port 8443 --ssl-keyfile certs/key.pem --ssl-certfile certs/cert.pem --reload
+```
+
 Aplikacja automatycznie utworzy tabele w bazie SQLite (`waterdeep.db`) i zainicjalizuje domyślne konto administratora:
 * **Użytkownik:** `admin`
 * **Hasło:** `HasloAdministratora123!`
 
-Interaktywna dokumentacja Swagger UI dostępna jest pod adresem: [http://localhost:8000/docs](http://localhost:8000/docs).
+Dokumentacja interaktywna Swagger UI dostępna jest pod adresem:
+* HTTP: [http://localhost:8000/docs](http://localhost:8000/docs)
+* HTTPS: [https://localhost:8443/docs](https://localhost:8443/docs)
 
 ### 3. Zasilenie bazy danymi przykładowymi (Wymóg F11)
 Aby załadować 6 serii miejskich wraz z 20 historycznymi pomiarami dla każdej z nich (wyłącznie za pośrednictwem API):
@@ -159,13 +173,19 @@ pytest -v
 ```
 
 ### Oficjalny skrypt sprawdzający kontrakt (ZAI 26Z)
-```bash
-# Weryfikacja Etapu E1 (wymóg 10 pkt):
-node docs/zai-tests.mjs --app http://localhost:8000 --user admin --pass 'HasloAdministratora123!' --stage E1
 
-# Podgląd weryfikacji Etapu E2:
-node docs/zai-tests.mjs --app http://localhost:8000 --user admin --pass 'HasloAdministratora123!' --stage E2
+#### Weryfikacja Etapu E1 (wymóg 10 pkt – serwer na porcie 8000):
+```bash
+node docs/zai-tests.mjs --app http://localhost:8000 --user admin --pass 'HasloAdministratora123!' --stage E1
 ```
+
+#### Weryfikacja Etapu E2 (wymóg HTTPS & CSP – serwer na porcie 8443):
+```bash
+NODE_TLS_REJECT_UNAUTHORIZED=0 node docs/zai-tests.mjs --app https://localhost:8443 --user admin --pass 'HasloAdministratora123!' --stage E2
+```
+
+> **Dlaczego flaga `NODE_TLS_REJECT_UNAUTHORIZED=0` przy testach lokalnych?**  
+> W środowisku lokalnym używamy certyfikatu podpisanego własnoręcznie (`self-signed`), więc Node.js domyślnie odrzuciłby go jako niezaufany. Flaga instruuje Node.js, aby zaufał lokalnemu certyfikatowi. Na serwerze produkcyjnym (np. Render / Fly.io / VPS z zaufanym Let's Encrypt) flaga ta nie jest potrzebna.
 
 ---
 
