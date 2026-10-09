@@ -61,19 +61,22 @@ Zamiast standardowych odczytów temperatury, system stanowi punkt dowodzenia Str
 ## 🚀 Jak Uruchomić Aplikację
 
 ### ⚡ Szybki start jednym poleceniem (Rekomendowane)
-Projekt posiada zintegrowany skrypt uruchomieniowy `./run.sh`, który automatycznie weryfikuje środowisko, w razie potrzeby buduje aplikację SPA i uruchamia serwer:
+Projekt posiada zintegrowany skrypt uruchomieniowy `./run.sh`, który automatycznie weryfikuje środowisko, buduje frontend w razie zmian, sprawdza dane w bazie (automatycznie zasila danymi demonstracyjnymi, jeśli baza jest pusta) i uruchamia aplikację gotową do interakcji:
 ```bash
-# Tryb standardowy (aplikacja SPA + API na porcie 8000):
+# 1. Główny start (kompletna aplikacja SPA + API pod http://localhost:8000):
 ./run.sh
 
-# Tryb bezpieczny HTTPS (na porcie 8443 pod testy E2 z certyfikatem SSL):
+# 2. Tryb na żywo (aplikacja + działający w tle emulator wysyłający pomiary co 2s):
+./run.sh --live
+
+# 3. Emulator w osobnym terminalu (do ręcznego sterowania i podglądu odrzuceń F4):
+./run.sh --generator
+
+# 4. Tryb bezpieczny HTTPS (na porcie 8443 pod testy E2 z certyfikatem SSL):
 ./run.sh --https
 
-# Tryb deweloperski (backend FastAPI 8000 + frontend Vite 5173 z hot-reloadem):
+# 5. Tryb deweloperski (backend FastAPI 8000 + frontend Vite 5173 z hot-reloadem):
 ./run.sh --dev
-
-# Zasilenie bazy danymi demonstracyjnymi:
-./run.sh --seed
 ```
 
 ---
