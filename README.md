@@ -60,6 +60,24 @@ Zamiast standardowych odczytów temperatury, system stanowi punkt dowodzenia Str
 
 ## 🚀 Jak Uruchomić Aplikację
 
+### ⚡ Szybki start jednym poleceniem (Rekomendowane)
+Projekt posiada zintegrowany skrypt uruchomieniowy `./run.sh`, który automatycznie weryfikuje środowisko, w razie potrzeby buduje aplikację SPA i uruchamia serwer:
+```bash
+# Tryb standardowy (aplikacja SPA + API na porcie 8000):
+./run.sh
+
+# Tryb bezpieczny HTTPS (na porcie 8443 pod testy E2 z certyfikatem SSL):
+./run.sh --https
+
+# Tryb deweloperski (backend FastAPI 8000 + frontend Vite 5173 z hot-reloadem):
+./run.sh --dev
+
+# Zasilenie bazy danymi demonstracyjnymi:
+./run.sh --seed
+```
+
+---
+
 ### 1. Przygotowanie środowiska (Virtualenv)
 ```bash
 # Utworzenie i aktywacja wirtualnego środowiska:
