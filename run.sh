@@ -29,7 +29,7 @@ for command_argument in "$@"; do
             echo "  ./run.sh          - Uruchamia serwer produkcyjny ze zintegrowanym frontendem (HTTP port 8000)"
             echo "  ./run.sh --https  - Uruchamia serwer z szyfrowaniem SSL (HTTPS port 8443 pod testy E2)"
             echo "  ./run.sh --dev    - Uruchamia backend (port 8000) oraz frontend Vite w trybie dev (port 5173)"
-            echo "  ./run.sh --seed   - Zasila bazę danymi demonstracyjnymi Waterdeep"
+            echo "  ./run.sh --seed   - Zasila bazę danymi demonstracyjnymi Waterdeep (uruchamia tymczasowe API jeśli nieaktywne)"
             exit 0
             ;;
         *)
@@ -58,10 +58,50 @@ if [ ! -f "frontend/dist/index.html" ] && [ "${launch_mode}" != "dev" ]; then
     echo "✅ Frontend zbudowany pomyślnie."
 fi
 
-# Wykonanie samego zasilenia bazy jeśli wybrano --seed
+# Wykonanie zasilenia bazy jeśli wybrano --seed
 if [ "${launch_mode}" = "seed_only" ]; then
     echo "🌱 Zasilanie bazy danymi demonstracyjnymi..."
+
+    server_already_running=false
+    if curl -s -f "http://${server_host}:${server_port}/api/health" &>/dev/null; then
+        server_already_running=true
+    fi
+
+    if [ "${server_already_running}" = "false" ]; then
+        echo "🚀 Tymczasowe uruchomienie serwera API do przesłania danych przez HTTP..."
+        "${uvicorn_binary}" backend.app.main:app --host "${server_host}" --port "${server_port}" &
+        temporary_server_process_id=$!
+
+        cleanup_temp_server() {
+            kill "${temporary_server_process_id}" 2>/dev/null || true
+        }
+        trap cleanup_temp_server EXIT INT TERM
+
+        # Oczekiwanie na gotowość serwera (do 10 sekund)
+        server_ready=false
+        for wait_attempt in $(seq 1 20); do
+            if curl -s -f "http://${server_host}:${server_port}/api/health" &>/dev/null; then
+                server_ready=true
+                break
+            fi
+            sleep 0.5
+        done
+
+        if [ "${server_ready}" = "false" ]; then
+            echo "❌ Nie udało się uruchomić serwera API."
+            exit 1
+        fi
+    fi
+
     "${python_binary}" generator/seed_waterdeep.py "http://${server_host}:${server_port}" admin "HasloAdministratora123!"
+
+    if [ "${server_already_running}" = "false" ]; then
+        echo "🛑 Zatrzymano tymczasowy serwer API."
+        kill "${temporary_server_process_id}" 2>/dev/null || true
+        trap - EXIT INT TERM
+    fi
+
+    echo "✅ Zasilenie bazy zakończone sukcesem!"
     exit 0
 fi
 
