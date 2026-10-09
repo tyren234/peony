@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, Response
+from fastapi.responses import HTMLResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -95,6 +96,17 @@ async def api_headers_and_security_middleware(request: Request, call_next) -> Re
 
     # 3. Dodanie nagłówków bezpieczeństwa
     response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: https:; "
+        "connect-src 'self' ws: wss: https:; "
+        "font-src 'self' data:; "
+        "frame-ancestors 'none'; "
+        "base-uri 'self'; "
+        "form-action 'self';"
+    )
     return response
 
 
@@ -109,3 +121,28 @@ app.include_router(measurements_router)
 def health_check() -> dict[str, str]:
     """Liveness probe verifying application availability."""
     return {"status": "ok"}
+
+
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+def get_home_page() -> HTMLResponse:
+    """Serve single page application entry point."""
+    html_markup = (
+        "<!DOCTYPE html>\n"
+        "<html lang=\"pl\">\n"
+        "<head>\n"
+        "  <meta charset=\"UTF-8\" />\n"
+        "  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n"
+        "  <meta name=\"description\" content=\"Waterdeep Watchtower – System Monitoringu Miasta Waterdeep\" />\n"
+        "  <title>Waterdeep Watchtower</title>\n"
+        "</head>\n"
+        "<body>\n"
+        "  <div id=\"root\">\n"
+        "    <header>\n"
+        "      <h1>Waterdeep Watchtower</h1>\n"
+        "      <p>Punkt Dowodzenia Straży Miejskiej Waterdeep i Wieży Blackstaffa</p>\n"
+        "    </header>\n"
+        "  </div>\n"
+        "</body>\n"
+        "</html>\n"
+    )
+    return HTMLResponse(content=html_markup, status_code=200)

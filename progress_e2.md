@@ -1,0 +1,90 @@
+# 🏰 Waterdeep Watchtower – Rejestr Postępów Realizacji (Etap E2)
+
+> **Zasada pracy:** Małe, czytelne kroki (do ~100–300 linii kodu na krok), dokładny review każdego etapu przed przejściem dalej.
+> **Zasada czystego kodu i nazewnictwa:** Bezwzględny zakaz stosowania jednoliterowych skrótów i niejasnych akronimów w nazwach zmiennych. Czytelność i pełne, samoopisujące się nazwy są priorytetem.
+> **Język:** Komunikaty API i błędy po angielsku. Interfejs użytkownika z klimatem Forgotten Realms / Waterdeep.
+> **Status bazowy:** Etap E1 zakończony w 100% (10/10 pkt). Przechodzimy do Etapu E2 (Frontend React SPA, Dostępność WCAG 2.2 AA, Bezpieczeństwo i Funkcje Bonusowe).
+
+---
+
+## 🗺️ Plan Małych Kroków (Etap E2)
+
+| Krok | Zakres | Cel | Status | Opis |
+|:---:|---|:---:|:---:|---|
+| **Krok E2.1** | **Backend Bezpieczeństwo & CSP:** Nagłówek CSP, endpoint `GET /` i obsługa HTTPS | A4 (3 pkt) | ✅ **ZATWIERDZONY** | Dodanie nagłówka `Content-Security-Policy`, endpointu `GET /` serwującego HTML, obsługa lokalnego/produkcyjnego HTTPS (100% testów A4 zdanych!) |
+| **Krok E2.2** | **Inicjalizacja Frontendu:** React + Vite + TypeScript | Fundament | ⏹️ Oczekuje | Konfiguracja projektu SPA w `frontend/`, integracja builda z FastAPI (serwowanie plików statycznych) |
+| **Krok E2.3** | **Dostępność i Układ:** WCAG 2.2 AA & RWD (~360px) | A5 (3 pkt), B2 | ⏹️ Oczekuje | Semantyczny HTML, etykiety formularzy, kontrast kolorów >= 4.5:1, audyt Lighthouse Accessibility >= 90 pkt |
+| **Krok E2.4** | **Wizualizacja Danych:** Wykres i Tabela z Synchronizacją | F2, F6 | ⏹️ Oczekuje | Wykres z rozróżnieniem kształtem i kolorem, dwukierunkowa synchronizacja wykres <-> tabela |
+| **Krok E2.5** | **Filtrowanie Danych:** Filtry Serii i Zakresów Czasu | F5 | ⏹️ Oczekuje | Interaktywny filtr serii, wybór przedziału `from` / `to`, szybkie zakresy (1h, 24h, wszystko) |
+| **Krok E2.6** | **Panel Administratora:** CRUD Serii i Czujników | F3, F8, F12 | ⏹️ Oczekuje | Logowanie Bearer tokenem, tworzenie/edycja/usuwanie serii, rejestracja czujników z jednorazowym kluczem API |
+| **Krok E2.7** | **Wydruk Raportu:** Stylizacja `@media print` | F7, B2 | ⏹️ Oczekuje | Czysty wydruk raportu bez kontrolek, formularzy i przycisków nawigacyjnych |
+| **Krok E2.8** | **Bonusy:** WebSockets / SSE na żywo (+3 pkt) & Dane Pogodowe (+2 pkt) | Bonus (+5 pkt) | ⏹️ Oczekuje | Aktualizacja wykresu na żywo po odebraniu telemetrii z generatora oraz tryb pobierania danych z Open-Meteo |
+| **Krok E2.9** | **Weryfikacja Końcowa:** Pełny audyt testów i dokumentacja | E2 (40 pkt + bonus) | ⏹️ Oczekuje | Uruchomienie `node docs/zai-tests.mjs --stage E2 --lighthouse`, nagranie demonstracyjne, dokumentacja PDF |
+
+---
+
+## 🔍 Szczegółowe Wymagania Etapu E2 (Specyfikacja ZAI 26Z)
+
+### 1. Część Automatyczna (A1–A5: 16 pkt)
+* **A1/A2 (6 pkt) – Kontrakt API:**
+  * Już zrealizowany w 100% w etapie E1.
+* **A3 (4 pkt) – Walidacja i Autoryzacja:**
+  * Już zrealizowany w 100% (blokady 422, 401, 404/405, RFC 9457).
+* **A4 (3 pkt) – Bezpieczeństwo:**
+  * Działanie przez HTTPS i przekierowanie z HTTP (lub port 80 zamknięty).
+  * Nagłówek `Content-Security-Policy` dla strony głównej `GET /`.
+  * `X-Content-Type-Options: nosniff` (zrealizowany).
+  * Flagi ciasteczek `HttpOnly`, `Secure`, `SameSite` (zrealizowany).
+  * Brak wycieku haseł i kluczy API (zrealizowany).
+  * Ograniczenie CORS (zrealizowany).
+  * Brak stack trace w odpowiedziach błędów (zrealizowany).
+* **A5 (3 pkt) – Dostępność (Lighthouse Accessibility):**
+  * Wynik Lighthouse Accessibility dla strony głównej >= 90 pkt (3 pkt), 80–89 pkt (2 pkt), 70–79 pkt (1 pkt).
+
+### 2. Część B (24 pkt – ocena funkcjonalności przez nagranie i listę kontrolną)
+* **B1 (13 pkt) – Wymagania F1–F13 w interfejsie:**
+  * F1: Wynik pomiaru jako float, timestamp i seria.
+  * F2: Serie na wykresie i w tabeli (osobna kolumna, osobna krzywa).
+  * F3: Role czytelnik (przeglądanie) vs administrator (zarządzanie).
+  * F4: Walidacja zakresu w formularzach i czytelne komunikaty błędów.
+  * F5: Filtry serii i czasu.
+  * F6: Synchronizacja interakcji wykres <-> tabela.
+  * F7: Wydruk `@media print`.
+  * F8: Zarządzanie seriami (CRUD).
+  * F9: Widok mobilny (~360px).
+  * F10: Prezentacja danych telemetrycznych w czasie rzeczywistym.
+  * F11: Dane przykładowe (min. 3 serie x 15 wyników).
+  * F12: Zarządzanie czujnikami (rejestracja z jednorazowym kluczem, lista, usuwanie).
+  * F13: Generator danych CLI.
+* **B2 (4 pkt) – Widok mobilny (~360px) oraz wydruk bez kontrolek.**
+* **B3 (3 pkt) – Dwa elementy bezpieczeństwa (Argon2id, SHA-256 kluczy API, CSP, Bearer).**
+* **B4 (2 pkt) – Diagram ERD i skrypt bazy danych.**
+* **B5 (2 pkt) – Dokumentacja PDF (do 8 stron).**
+
+### 3. Punkty Dodatkowe (do 10 pkt)
+* Aktualizacja wykresu w czasie rzeczywistym (WebSocket / SSE): **+3 pkt**
+* Generator pobierający dane z publicznego API pogodowego: **+2 pkt**
+* Testy automatyczne w GitHub Actions CI: **+2 pkt**
+* Baza szeregów czasowych: **+3 pkt**
+
+---
+
+## 🔍 Krok E2.1 – Szczegóły Zrealizowanego Kodu (Bezpieczeństwo & CSP)
+
+Pliki w repozytorium zmodyfikowane w ramach Kroku E2.1:
+
+1. **`backend/app/main.py`**:
+   * Dodano globalny nagłówek `Content-Security-Policy` w middleware bezpieczeństwa (`api_headers_and_security_middleware`).
+   * Zaimplementowano endpoint `GET /` zwracający semantyczny dokument HTML (kod 200) przygotowany jako punkt wejścia pod aplikację React SPA.
+2. **`tests/test_health.py`**:
+   * Dodano test `test_home_page_endpoint` weryfikujący kod 200, nagłówek `Content-Security-Policy`, `X-Content-Type-Options: nosniff` oraz poprawność struktury HTML.
+3. **Konfiguracja środowiska HTTPS**:
+   * Dodano ignorowanie certyfikatów SSL (`certs/`, `*.pem`) w `.gitignore`.
+   * Skrypt weryfikacyjny z certyfikatami SSL i uvicorn na porcie 8443 pomyślnie zalicza wszystkie testy bezpieczeństwa grupy `[A4]` w `docs/zai-tests.mjs`.
+4. **Wyniki testów**:
+   * Pytest: **96/96 testów przechodzi pomyślnie** (0 warnings).
+   * Skrypt prowadzącego `docs/zai-tests.mjs --stage E2`:
+     * `[A1/A2] kontrakt`: **6 / 6 pkt** (100%)
+     * `[A3] walidacja`: **4 / 4 pkt** (100%)
+     * `[A4] bezpieczenstwo`: **3 / 3 pkt** (100%)
+     * Łącznie: **13 / 13 pkt** (maksimum punktów przed wdrożeniem interfejsu dla Lighthouse A5).
