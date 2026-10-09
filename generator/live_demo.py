@@ -17,7 +17,7 @@ def run_live_demonstration_emulator(
     api_base_url: str = "http://127.0.0.1:8000",
     admin_username: str = "admin",
     admin_password: str = "HasloAdministratora123!",
-    interval_seconds: float = 2.0,
+    interval_seconds: float = 30.0,
     generation_mode: str = "sine",
     measurement_count: int = 0,
 ) -> None:
@@ -108,7 +108,7 @@ def main() -> None:
     argument_parser = argparse.ArgumentParser(description="Live IoT telemetry emulator")
     argument_parser.add_argument("url", nargs="?", default="http://127.0.0.1:8000", help="API URL")
     argument_parser.add_argument("--count", type=int, default=0, help="Number of measurements (0 for infinite)")
-    argument_parser.add_argument("--interval", type=float, default=2.0, help="Interval in seconds")
+    argument_parser.add_argument("--interval", type=float, default=30.0, help="Interval in seconds")
     argument_parser.add_argument("--mode", default="sine", choices=["sine", "random", "linear"], help="Generation pattern")
     parsed_arguments = argument_parser.parse_args()
 

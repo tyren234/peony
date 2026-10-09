@@ -66,7 +66,7 @@ Projekt posiada zintegrowany skrypt uruchomieniowy `./run.sh`, który automatycz
 # 1. Główny start (kompletna aplikacja SPA + API pod http://localhost:8000):
 ./run.sh
 
-# 2. Tryb na żywo (aplikacja + działający w tle emulator wysyłający pomiary co 2s):
+# 2. Tryb na żywo (aplikacja + działający w tle emulator wysyłający pomiary co 30s):
 ./run.sh --live
 
 # 3. Emulator w osobnym terminalu (do ręcznego sterowania i podglądu odrzuceń F4):

@@ -42,7 +42,7 @@ for command_argument in "$@"; do
             echo "  ./run.sh             - Główny start: buduje frontend, sprawdza dane w bazie i"
             echo "                         uruchamia aplikację pod http://localhost:8000"
             echo "  ./run.sh --live      - Uruchamia serwer oraz w tle emulator przesyłający nowe"
-            echo "                         pomiary na żywo co 2 sekundy"
+            echo "                         pomiary na żywo co 30 sekund"
             echo "  ./run.sh --generator - Uruchamia w osobnym terminalu emulator czujnika na żywo"
             echo "  ./run.sh --seed      - Uruchamia serwer z wymuszonym ponownym zasileniem danymi"
             echo "  ./run.sh --https     - Uruchamia serwer z szyfrowaniem SSL (port 8443 pod testy E2)"
@@ -227,7 +227,7 @@ fi
 
 # Tryb pracy na żywo (--live): uruchomienie emulatora w tle
 if [ "${launch_mode}" = "live" ]; then
-    echo "📡 Uruchamianie emulatora pomiarów na żywo w tle (co 2 sekundy)..."
+    echo "📡 Uruchamianie emulatora pomiarów na żywo w tle (co 30 sekund)..."
     "${python_binary}" generator/live_demo.py "${protocol_scheme}://${server_host}:${server_port}" &
     generator_process_identifier=$!
 fi

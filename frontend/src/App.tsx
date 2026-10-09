@@ -129,14 +129,14 @@ export const App: React.FC = () => {
     };
   }, []);
 
-  // Automatyczne odpytywanie serwera co 4 sekundy jako mechanizm awaryjny
+  // Automatyczne odpytywanie serwera co 30 sekund jako mechanizm awaryjny
   useEffect(() => {
     if (!isAutoRefreshActive) {
       return;
     }
     const autoRefreshIntervalIdentifier = setInterval(() => {
       loadMeasurementsData(true);
-    }, 4000);
+    }, 30000);
 
     return () => {
       clearInterval(autoRefreshIntervalIdentifier);
@@ -265,7 +265,7 @@ export const App: React.FC = () => {
                   checked={isAutoRefreshActive}
                   onChange={(toggleChangeEvent) => setIsAutoRefreshActive(toggleChangeEvent.target.checked)}
                 />
-                <span>Auto-odświeżanie (4s)</span>
+                <span>Auto-odświeżanie (30s)</span>
               </label>
               {isWebSocketConnected && (
                 <span className="live-status-badge">
