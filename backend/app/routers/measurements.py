@@ -1,3 +1,4 @@
+from backend.app.websocket_manager import telemetry_broadcaster
 from datetime import datetime, timedelta
 from typing import Optional
 from fastapi import APIRouter, Depends, Header, Query, Response, status
@@ -145,7 +146,7 @@ def get_measurements(
     response_model_by_alias=True,
     status_code=status.HTTP_201_CREATED,
 )
-def create_measurement(
+async def create_measurement(
     measurement_input: MeasurementInput,
     response: Response,
     x_api_key: Optional[str] = Header(default=None, alias="X-API-Key"),
@@ -230,6 +231,15 @@ def create_measurement(
     database_session.refresh(new_measurement)
 
     response.headers["Location"] = f"/api/measurements/{new_measurement.id}"
+    await telemetry_broadcaster.broadcast_measurement(
+        {
+            "id": new_measurement.id,
+            "seriesId": new_measurement.series_id,
+            "sensorId": new_measurement.sensor_id,
+            "value": new_measurement.value,
+            "timestamp": new_measurement.timestamp.isoformat(),
+        }
+    )
     return new_measurement
 
 

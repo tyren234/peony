@@ -1,5 +1,6 @@
+from backend.app.websocket_manager import telemetry_broadcaster
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request, Response, WebSocket, WebSocketDisconnect
 from pathlib import Path
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -117,6 +118,19 @@ app.include_router(auth_router)
 app.include_router(series_router)
 app.include_router(sensors_router)
 app.include_router(measurements_router)
+
+@app.websocket("/ws/telemetry")
+async def websocket_telemetry_stream(websocket_connection: WebSocket) -> None:
+    """Stream live telemetry measurements to subscribed clients in real time (Bonus requirement)."""
+    await telemetry_broadcaster.register_connection(websocket_connection)
+    try:
+        while True:
+            await websocket_connection.receive_text()
+    except WebSocketDisconnect:
+        telemetry_broadcaster.unregister_connection(websocket_connection)
+    except Exception:
+        telemetry_broadcaster.unregister_connection(websocket_connection)
+
 
 
 @app.get("/api/health", tags=["system"], summary="Health check")

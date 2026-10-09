@@ -211,6 +211,35 @@ button {
   gap: 0.5rem;
   flex-wrap: wrap;
 }
+.live-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  background-color: #dcfce7;
+  color: #166534;
+  border: 1px solid #86efac;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.last-refreshed-label {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-left: 0.25rem;
+}
+
+.auto-refresh-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--color-text-main);
+  cursor: pointer;
+  margin-left: 0.25rem;
+}
+
 
 /* Telemetry Chart */
 .chart-container {

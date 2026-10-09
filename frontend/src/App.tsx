@@ -16,6 +16,9 @@ export const App: React.FC = () => {
   const [selectedMeasurementIdentifier, setSelectedMeasurementIdentifier] = useState<number | null>(null);
   const [isLoadingData, setIsLoadingData] = useState<boolean>(true);
   const [applicationErrorMessage, setApplicationErrorMessage] = useState<string>("");
+  const [lastRefreshedTime, setLastRefreshedTime] = useState<string>("");
+  const [isWebSocketConnected, setIsWebSocketConnected] = useState<boolean>(false);
+  const [isAutoRefreshActive, setIsAutoRefreshActive] = useState<boolean>(true);
 
   const loadSeriesData = async () => {
     try {
@@ -39,11 +42,12 @@ export const App: React.FC = () => {
         selectedSeriesIdentifiers: selectedSeriesIdentifiers,
         rangeFromTimestamp: rangeFromTimestamp ? new Date(rangeFromTimestamp).toISOString() : undefined,
         rangeToTimestamp: rangeToTimestamp ? new Date(rangeToTimestamp).toISOString() : undefined,
-        maximumResultsLimit: 500,
-        sortDirection: "asc",
+        maximumResultsLimit: 2000,
+        sortDirection: "desc",
       };
       const loadedMeasurements = await fetchMeasurements(filterCriteria);
       setMeasurementsList(loadedMeasurements);
+      setLastRefreshedTime(new Date().toLocaleTimeString());
     } catch (loadError) {
       setApplicationErrorMessage(
         loadError instanceof Error ? loadError.message : "Błąd pobierania pomiarów"
@@ -62,6 +66,78 @@ export const App: React.FC = () => {
       loadMeasurementsData();
     }
   }, [seriesList, selectedSeriesIdentifiers, rangeFromTimestamp, rangeToTimestamp]);
+
+  // Połączenie WebSocket dla natychmiastowej aktualizacji na żywo (wymóg bonusowy)
+  useEffect(() => {
+    let websocketInstance: WebSocket | null = null;
+    let reconnectTimeoutIdentifier: ReturnType<typeof setTimeout> | null = null;
+
+    const connectToTelemetryWebSocket = () => {
+      const isSecureConnection = window.location.protocol === "https:";
+      const websocketProtocolScheme = isSecureConnection ? "wss:" : "ws:";
+      const websocketTargetUrl = `${websocketProtocolScheme}//${window.location.host}/ws/telemetry`;
+
+      try {
+        websocketInstance = new WebSocket(websocketTargetUrl);
+
+        websocketInstance.onopen = () => {
+          setIsWebSocketConnected(true);
+        };
+
+        websocketInstance.onmessage = (messageEvent) => {
+          try {
+            const incomingMeasurement: MeasurementItem = JSON.parse(messageEvent.data);
+            setMeasurementsList((previousList) => {
+              if (previousList.some((existingItem) => existingItem.id === incomingMeasurement.id)) {
+                return previousList;
+              }
+              return [incomingMeasurement, ...previousList].slice(0, 2000);
+            });
+            setLastRefreshedTime(new Date().toLocaleTimeString());
+          } catch (parsingError) {
+            console.error("Błąd parsowania pomiaru WebSocket:", parsingError);
+          }
+        };
+
+        websocketInstance.onclose = () => {
+          setIsWebSocketConnected(false);
+          reconnectTimeoutIdentifier = setTimeout(connectToTelemetryWebSocket, 3000);
+        };
+
+        websocketInstance.onerror = () => {
+          setIsWebSocketConnected(false);
+        };
+      } catch (connectionError) {
+        setIsWebSocketConnected(false);
+        reconnectTimeoutIdentifier = setTimeout(connectToTelemetryWebSocket, 3000);
+      }
+    };
+
+    connectToTelemetryWebSocket();
+
+    return () => {
+      if (reconnectTimeoutIdentifier) {
+        clearTimeout(reconnectTimeoutIdentifier);
+      }
+      if (websocketInstance) {
+        websocketInstance.close();
+      }
+    };
+  }, []);
+
+  // Automatyczne odpytywanie serwera co 4 sekundy jako mechanizm awaryjny
+  useEffect(() => {
+    if (!isAutoRefreshActive) {
+      return;
+    }
+    const autoRefreshIntervalIdentifier = setInterval(() => {
+      loadMeasurementsData();
+    }, 4000);
+
+    return () => {
+      clearInterval(autoRefreshIntervalIdentifier);
+    };
+  }, [isAutoRefreshActive, selectedSeriesIdentifiers, rangeFromTimestamp, rangeToTimestamp]);
 
   const handleToggleSeriesSelection = (seriesIdentifier: number) => {
     setSelectedSeriesIdentifiers((previousSelectedIdentifiers) => {
@@ -171,7 +247,32 @@ export const App: React.FC = () => {
               <button onClick={handleSetQuickRangeAll} className="quick-filter-button">Wszystko</button>
               <button onClick={handleSetQuickRangeLastHour} className="quick-filter-button">Ostatnia 1h</button>
               <button onClick={handleSetQuickRangeLastDay} className="quick-filter-button">Ostatnie 24h</button>
-              <button onClick={loadMeasurementsData} className="primary-button">Odśwież</button>
+              <button
+                onClick={loadMeasurementsData}
+                className="primary-button"
+                disabled={isLoadingData}
+                title="Pobierz najnowsze pomiary z serwera"
+              >
+                {isLoadingData ? "Odświeżanie..." : "🔄 Odśwież"}
+              </button>
+              <label className="auto-refresh-toggle-label">
+                <input
+                  type="checkbox"
+                  checked={isAutoRefreshActive}
+                  onChange={(toggleChangeEvent) => setIsAutoRefreshActive(toggleChangeEvent.target.checked)}
+                />
+                <span>Auto-odświeżanie (4s)</span>
+              </label>
+              {isWebSocketConnected && (
+                <span className="live-status-badge">
+                  🟢 Na żywo (WebSocket)
+                </span>
+              )}
+              {lastRefreshedTime && (
+                <span className="last-refreshed-label">
+                  Zaktualizowano: {lastRefreshedTime} ({measurementsList.length} odczytów)
+                </span>
+              )}
             </div>
           </div>
         </section>
