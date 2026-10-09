@@ -7,6 +7,7 @@ import {
   fetchSensors,
   loginAdministrator,
   logoutAdministrator,
+  changePassword,
   registerSensor,
   unregisterSensor,
 } from "../services/api";
@@ -45,6 +46,12 @@ export const AdminPanel: React.FC<AdminPanelProperties> = ({
   const [newSensorSeriesId, setNewSensorSeriesId] = useState<number>(
     seriesList.length > 0 ? seriesList[0].id : 1
   );
+
+  // Stan zmiany hasła (F8)
+  const [currentPasswordValue, setCurrentPasswordValue] = useState<string>("");
+  const [newPasswordValue, setNewPasswordValue] = useState<string>("");
+  const [confirmPasswordValue, setConfirmPasswordValue] = useState<string>("");
+
 
   useEffect(() => {
     if (seriesList.length > 0 && !newSensorSeriesId) {
@@ -181,6 +188,35 @@ export const AdminPanel: React.FC<AdminPanelProperties> = ({
     } catch (registrationError) {
       setActionFeedbackMessage(
         registrationError instanceof Error ? registrationError.message : "Błąd rejestracji czujnika"
+      );
+    }
+  };
+
+  const handleChangePasswordSubmit = async (formSubmitEvent: React.FormEvent) => {
+    formSubmitEvent.preventDefault();
+    setActionFeedbackMessage("");
+
+    if (newPasswordValue !== confirmPasswordValue) {
+      setActionFeedbackMessage("Błąd: Nowe hasło i potwierdzenie hasła nie są identyczne.");
+      return;
+    }
+
+    if (newPasswordValue.length < 8) {
+      setActionFeedbackMessage("Błąd: Nowe hasło musi mieć co najmniej 8 znaków.");
+      return;
+    }
+
+    try {
+      await changePassword(bearerToken, currentPasswordValue, newPasswordValue);
+      setCurrentPasswordValue("");
+      setNewPasswordValue("");
+      setConfirmPasswordValue("");
+      setActionFeedbackMessage("Hasło administratora zostało pomyślnie zmienione.");
+    } catch (passwordChangeError) {
+      setActionFeedbackMessage(
+        passwordChangeError instanceof Error
+          ? passwordChangeError.message
+          : "Błąd podczas zmiany hasła"
       );
     }
   };
@@ -353,6 +389,44 @@ export const AdminPanel: React.FC<AdminPanelProperties> = ({
                   </select>
                 </div>
                 <button type="submit" className="primary-button">Zarejestruj i pobierz klucz API</button>
+              </form>
+            </div>
+
+            {/* Zmiana hasła administratora (F8) */}
+            <div className="admin-card">
+              <h3>Zmień hasło administratora (F8)</h3>
+              <form onSubmit={handleChangePasswordSubmit}>
+                <div className="form-field">
+                  <label htmlFor="current-password-input">Bieżące hasło:</label>
+                  <input
+                    id="current-password-input"
+                    type="password"
+                    value={currentPasswordValue}
+                    onChange={(changeEvent) => setCurrentPasswordValue(changeEvent.target.value)}
+                    required
+                  />
+                </div>
+                <div className="form-field">
+                  <label htmlFor="new-password-input">Nowe hasło:</label>
+                  <input
+                    id="new-password-input"
+                    type="password"
+                    value={newPasswordValue}
+                    onChange={(changeEvent) => setNewPasswordValue(changeEvent.target.value)}
+                    required
+                  />
+                </div>
+                <div className="form-field">
+                  <label htmlFor="confirm-password-input">Potwierdź nowe hasło:</label>
+                  <input
+                    id="confirm-password-input"
+                    type="password"
+                    value={confirmPasswordValue}
+                    onChange={(changeEvent) => setConfirmPasswordValue(changeEvent.target.value)}
+                    required
+                  />
+                </div>
+                <button type="submit" className="primary-button">Zaktualizuj hasło</button>
               </form>
             </div>
           </div>

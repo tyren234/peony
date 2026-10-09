@@ -186,3 +186,23 @@ export async function unregisterSensor(
   });
   await parseJsonResponseOrThrow<void>(requestResponse);
 }
+
+export async function changePassword(
+  bearerToken: string,
+  currentPasswordValue: string,
+  newPasswordValue: string
+): Promise<void> {
+  const requestResponse = await fetch(`${apiBaseUrl}/api/auth/password`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${bearerToken}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({
+      currentPassword: currentPasswordValue,
+      newPassword: newPasswordValue,
+    }),
+  });
+  await parseJsonResponseOrThrow<void>(requestResponse);
+}
