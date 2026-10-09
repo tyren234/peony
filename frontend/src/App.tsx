@@ -34,8 +34,10 @@ export const App: React.FC = () => {
     }
   };
 
-  const loadMeasurementsData = async () => {
-    setIsLoadingData(true);
+  const loadMeasurementsData = async (isBackgroundRefresh: boolean = false) => {
+    if (!isBackgroundRefresh) {
+      setIsLoadingData(true);
+    }
     setApplicationErrorMessage("");
     try {
       const filterCriteria: TelemetryFilterCriteria = {
@@ -53,7 +55,9 @@ export const App: React.FC = () => {
         loadError instanceof Error ? loadError.message : "Błąd pobierania pomiarów"
       );
     } finally {
-      setIsLoadingData(false);
+      if (!isBackgroundRefresh) {
+        setIsLoadingData(false);
+      }
     }
   };
 
@@ -131,7 +135,7 @@ export const App: React.FC = () => {
       return;
     }
     const autoRefreshIntervalIdentifier = setInterval(() => {
-      loadMeasurementsData();
+      loadMeasurementsData(true);
     }, 4000);
 
     return () => {
@@ -248,7 +252,7 @@ export const App: React.FC = () => {
               <button onClick={handleSetQuickRangeLastHour} className="quick-filter-button">Ostatnia 1h</button>
               <button onClick={handleSetQuickRangeLastDay} className="quick-filter-button">Ostatnie 24h</button>
               <button
-                onClick={loadMeasurementsData}
+                onClick={() => loadMeasurementsData(false)}
                 className="primary-button"
                 disabled={isLoadingData}
                 title="Pobierz najnowsze pomiary z serwera"
@@ -277,8 +281,8 @@ export const App: React.FC = () => {
           </div>
         </section>
 
-        {/* Informacja o ładowaniu */}
-        {isLoadingData && (
+        {/* Informacja o początkowym ładowaniu */}
+        {isLoadingData && measurementsList.length === 0 && (
           <div className="loading-indicator" role="status">
             Pobieranie aktualnych odczytów telemetrii...
           </div>

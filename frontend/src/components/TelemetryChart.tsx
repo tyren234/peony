@@ -26,9 +26,9 @@ export const TelemetryChart: React.FC<TelemetryChartProperties> = ({
     );
   }
 
-  const svgChartWidth = 800;
+  const svgChartWidth = 840;
   const svgChartHeight = 360;
-  const marginPadding = { top: 20, right: 30, bottom: 40, left: 60 };
+  const marginPadding = { top: 20, right: 30, bottom: 50, left: 60 };
 
   const usableChartWidth = svgChartWidth - marginPadding.left - marginPadding.right;
   const usableChartHeight = svgChartHeight - marginPadding.top - marginPadding.bottom;
@@ -61,6 +61,26 @@ export const TelemetryChart: React.FC<TelemetryChartProperties> = ({
     return marginPadding.top + (1 - progressRatio) * usableChartHeight;
   };
 
+  // Formatowanie etykiety skali czasu na osi X
+  const formatTimestampAxisLabel = (
+    timestampMilliseconds: number,
+    totalSpanMilliseconds: number
+  ): string => {
+    const dateObject = new Date(timestampMilliseconds);
+    if (totalSpanMilliseconds < 24 * 60 * 60 * 1000) {
+      return dateObject.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
+    }
+    const dayNumber = String(dateObject.getDate()).padStart(2, "0");
+    const monthNumber = String(dateObject.getMonth() + 1).padStart(2, "0");
+    const hoursNumber = String(dateObject.getHours()).padStart(2, "0");
+    const minutesNumber = String(dateObject.getMinutes()).padStart(2, "0");
+    return `${dayNumber}.${monthNumber} ${hoursNumber}:${minutesNumber}`;
+  };
+
   // Grupowanie pomiarów według serii
   const measurementsGroupedBySeries: { [seriesId: number]: MeasurementItem[] } = {};
   for (const singleMeasurement of measurementsList) {
@@ -80,11 +100,12 @@ export const TelemetryChart: React.FC<TelemetryChartProperties> = ({
     pointMeasurementIdentifier: number,
     accessibleDescription: string
   ) => {
-    const pointRadius = isPointSelected ? 7 : 4.5;
+    const pointRadius = isPointSelected ? 5.5 : 2.0;
+    const strokeWidthValue = isPointSelected ? 2.0 : 0.8;
     const commonProperties = {
       fill: isPointSelected ? "#ffffff" : pointColor,
       stroke: pointColor,
-      strokeWidth: isPointSelected ? 3 : 1.5,
+      strokeWidth: strokeWidthValue,
       className: `chart-point ${isPointSelected ? "selected-point" : ""}`,
       tabIndex: 0,
       role: "button" as const,
@@ -108,7 +129,9 @@ export const TelemetryChart: React.FC<TelemetryChartProperties> = ({
           width={squareSize}
           height={squareSize}
           {...commonProperties}
-        />
+        >
+          <title>{accessibleDescription}</title>
+        </rect>
       );
     }
 
@@ -118,7 +141,11 @@ export const TelemetryChart: React.FC<TelemetryChartProperties> = ({
       },${centerCoordinateY + pointRadius} ${centerCoordinateX + pointRadius},${
         centerCoordinateY + pointRadius
       }`;
-      return <polygon key={pointMeasurementIdentifier} points={trianglePoints} {...commonProperties} />;
+      return (
+        <polygon key={pointMeasurementIdentifier} points={trianglePoints} {...commonProperties}>
+          <title>{accessibleDescription}</title>
+        </polygon>
+      );
     }
 
     if (shapeType === "diamond") {
@@ -127,7 +154,11 @@ export const TelemetryChart: React.FC<TelemetryChartProperties> = ({
       },${centerCoordinateY} ${centerCoordinateX},${centerCoordinateY + pointRadius * 1.3} ${
         centerCoordinateX - pointRadius * 1.2
       },${centerCoordinateY}`;
-      return <polygon key={pointMeasurementIdentifier} points={diamondPoints} {...commonProperties} />;
+      return (
+        <polygon key={pointMeasurementIdentifier} points={diamondPoints} {...commonProperties}>
+          <title>{accessibleDescription}</title>
+        </polygon>
+      );
     }
 
     // Domyślnie circle
@@ -138,7 +169,9 @@ export const TelemetryChart: React.FC<TelemetryChartProperties> = ({
         cy={centerCoordinateY}
         r={pointRadius}
         {...commonProperties}
-      />
+      >
+        <title>{accessibleDescription}</title>
+      </circle>
     );
   };
 
@@ -174,7 +207,7 @@ export const TelemetryChart: React.FC<TelemetryChartProperties> = ({
           const gridLevelValue = chartMinimumValue + gridRatioIndex * chartValueSpan;
           const gridCoordinateY = calculateCoordinateY(gridLevelValue);
           return (
-            <g key={gridRatioIndex} className="grid-horizontal-line">
+            <g key={`y-grid-${gridRatioIndex}`} className="grid-horizontal-line">
               <line
                 x1={marginPadding.left}
                 y1={gridCoordinateY}
@@ -192,6 +225,42 @@ export const TelemetryChart: React.FC<TelemetryChartProperties> = ({
                 fontSize="11"
               >
                 {gridLevelValue.toFixed(1)}
+              </text>
+            </g>
+          );
+        })}
+
+        {/* Siatka pionowa i etykiety osi X (skala czasu) */}
+        {[0, 0.25, 0.5, 0.75, 1.0].map((gridRatioIndex) => {
+          const tickTimestamp = minimumTimestamp + gridRatioIndex * timestampSpan;
+          const gridCoordinateX = marginPadding.left + gridRatioIndex * usableChartWidth;
+          return (
+            <g key={`x-grid-${gridRatioIndex}`} className="grid-vertical-line">
+              <line
+                x1={gridCoordinateX}
+                y1={marginPadding.top}
+                x2={gridCoordinateX}
+                y2={svgChartHeight - marginPadding.bottom}
+                stroke="#f1f5f9"
+                strokeDasharray="4 4"
+              />
+              <line
+                x1={gridCoordinateX}
+                y1={svgChartHeight - marginPadding.bottom}
+                x2={gridCoordinateX}
+                y2={svgChartHeight - marginPadding.bottom + 5}
+                stroke="#64748b"
+                strokeWidth="1"
+              />
+              <text
+                x={gridCoordinateX}
+                y={svgChartHeight - marginPadding.bottom + 18}
+                textAnchor="middle"
+                className="axis-label"
+                fill="#64748b"
+                fontSize="10"
+              >
+                {formatTimestampAxisLabel(tickTimestamp, timestampSpan)}
               </text>
             </g>
           );
@@ -242,7 +311,7 @@ export const TelemetryChart: React.FC<TelemetryChartProperties> = ({
               <polyline
                 fill="none"
                 stroke={seriesEntry.color}
-                strokeWidth="2.5"
+                strokeWidth="1.2"
                 points={polylineCoordinates}
               />
               {sortedPoints.map((singlePoint) => {
