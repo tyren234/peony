@@ -1,6 +1,8 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, Response
+from pathlib import Path
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -123,26 +125,37 @@ def health_check() -> dict[str, str]:
     return {"status": "ok"}
 
 
+frontend_distribution_path = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
+frontend_assets_path = frontend_distribution_path / "assets"
+if frontend_assets_path.exists():
+    app.mount("/assets", StaticFiles(directory=str(frontend_assets_path)), name="static_assets")
+
+
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
 def get_home_page() -> HTMLResponse:
     """Serve single page application entry point."""
-    html_markup = (
-        "<!DOCTYPE html>\n"
-        "<html lang=\"pl\">\n"
-        "<head>\n"
-        "  <meta charset=\"UTF-8\" />\n"
-        "  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n"
-        "  <meta name=\"description\" content=\"Waterdeep Watchtower – System Monitoringu Miasta Waterdeep\" />\n"
-        "  <title>Waterdeep Watchtower</title>\n"
-        "</head>\n"
-        "<body>\n"
-        "  <div id=\"root\">\n"
-        "    <header>\n"
-        "      <h1>Waterdeep Watchtower</h1>\n"
-        "      <p>Punkt Dowodzenia Straży Miejskiej Waterdeep i Wieży Blackstaffa</p>\n"
-        "    </header>\n"
-        "  </div>\n"
-        "</body>\n"
-        "</html>\n"
-    )
+    index_html_file_path = frontend_distribution_path / "index.html"
+    if index_html_file_path.exists():
+        with open(index_html_file_path, "r", encoding="utf-8") as file_handle:
+            html_markup = file_handle.read()
+    else:
+        html_markup = (
+            "<!DOCTYPE html>\n"
+            "<html lang=\"pl\">\n"
+            "<head>\n"
+            "  <meta charset=\"UTF-8\" />\n"
+            "  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n"
+            "  <meta name=\"description\" content=\"Waterdeep Watchtower – System Monitoringu Miasta Waterdeep\" />\n"
+            "  <title>Waterdeep Watchtower</title>\n"
+            "</head>\n"
+            "<body>\n"
+            "  <div id=\"root\">\n"
+            "    <header>\n"
+            "      <h1>Waterdeep Watchtower</h1>\n"
+            "      <p>Punkt Dowodzenia Straży Miejskiej Waterdeep i Wieży Blackstaffa</p>\n"
+            "    </header>\n"
+            "  </div>\n"
+            "</body>\n"
+            "</html>\n"
+        )
     return HTMLResponse(content=html_markup, status_code=200)
