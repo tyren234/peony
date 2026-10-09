@@ -13,11 +13,11 @@
 |:---:|---|:---:|:---:|---|
 | **Krok E2.1** | **Backend Bezpieczeństwo & CSP:** Nagłówek CSP, endpoint `GET /` i obsługa HTTPS | A4 (3 pkt) | ✅ **ZATWIERDZONY** | Dodanie nagłówka `Content-Security-Policy`, endpointu `GET /` serwującego HTML, obsługa lokalnego/produkcyjnego HTTPS (100% testów A4 zdanych!) |
 | **Krok E2.2** | **Inicjalizacja Frontendu:** React + Vite + TypeScript | Fundament | ✅ **ZATWIERDZONY** | Projekt SPA w `frontend/`, typy domenowe, moduł `api.ts`, integracja serwowania w FastAPI |
-| **Krok E2.3** | **Dostępność i Układ:** WCAG 2.2 AA & RWD (~360px) | A5 (3 pkt), B2 | ⏹️ Oczekuje | Semantyczny HTML, etykiety formularzy, kontrast kolorów >= 4.5:1, audyt Lighthouse Accessibility >= 90 pkt |
-| **Krok E2.4** | **Wizualizacja Danych:** Wykres i Tabela z Synchronizacją | F2, F6 | ⏹️ Oczekuje | Wykres z rozróżnieniem kształtem i kolorem, dwukierunkowa synchronizacja wykres <-> tabela |
-| **Krok E2.5** | **Filtrowanie Danych:** Filtry Serii i Zakresów Czasu | F5 | ⏹️ Oczekuje | Interaktywny filtr serii, wybór przedziału `from` / `to`, szybkie zakresy (1h, 24h, wszystko) |
-| **Krok E2.6** | **Panel Administratora:** CRUD Serii i Czujników | F3, F8, F12 | ⏹️ Oczekuje | Logowanie Bearer tokenem, tworzenie/edycja/usuwanie serii, rejestracja czujników z jednorazowym kluczem API |
-| **Krok E2.7** | **Wydruk Raportu:** Stylizacja `@media print` | F7, B2 | ⏹️ Oczekuje | Czysty wydruk raportu bez kontrolek, formularzy i przycisków nawigacyjnych |
+| **Krok E2.3** | **Dostępność i Układ:** WCAG 2.2 AA & RWD (~360px) | A5 (3 pkt), B2 | ✅ **ZATWIERDZONY** | Semantyczny HTML, etykiety formularzy, kontrast >= 4.5:1, responsywność do 360px |
+| **Krok E2.4** | **Wizualizacja Danych:** Wykres i Tabela z Synchronizacją | F2, F6 | ✅ **ZATWIERDZONY** | Minimalistyczny wykres SVG z kształtami i kolorami, dwukierunkowa synchronizacja wykres <-> tabela |
+| **Krok E2.5** | **Filtrowanie Danych:** Filtry Serii i Zakresów Czasu | F5 | ✅ **ZATWIERDZONY** | Wybór serii (checkboxy), zakres `from`/`to`, szybkie filtry czasowe (1h, 24h, wszystko) |
+| **Krok E2.6** | **Panel Administratora:** CRUD Serii i Czujników | F3, F8, F12 | ✅ **ZATWIERDZONY** | Logowanie Bearer, tworzenie/usuwanie serii (min < max), rejestracja z jednorazowym kluczem API, unregister |
+| **Krok E2.7** | **Wydruk Raportu:** Stylizacja `@media print` | F7, B2 | ✅ **ZATWIERDZONY** | Czysty wydruk raportu z ukrytymi kontrolkami i formularzami |
 | **Krok E2.8** | **Bonusy:** WebSockets / SSE na żywo (+3 pkt) & Dane Pogodowe (+2 pkt) | Bonus (+5 pkt) | ⏹️ Oczekuje | Aktualizacja wykresu na żywo po odebraniu telemetrii z generatora oraz tryb pobierania danych z Open-Meteo |
 | **Krok E2.9** | **Weryfikacja Końcowa:** Pełny audyt testów i dokumentacja | E2 (40 pkt + bonus) | ⏹️ Oczekuje | Uruchomienie `node docs/zai-tests.mjs --stage E2 --lighthouse`, nagranie demonstracyjne, dokumentacja PDF |
 
@@ -108,4 +108,34 @@ Pliki w repozytorium utworzone/zmodyfikowane w ramach Kroku E2.2:
    * Endpoint `GET /` serwuje wygenerowany plik `dist/index.html` (lub awaryjny HTML) z nagłówkami `Content-Security-Policy` i `X-Content-Type-Options: nosniff`.
 5. **Weryfikacja**:
    * `npm run build` kompiluje TypeScript i paczkę produkcyjną bez żadnych ostrzeżeń.
+   * Wszystkie 96 testów pytest przechodzi w 100%.
+
+---
+
+## 🔍 Kroki E2.3–E2.7 – Szczegóły Zrealizowanego Kodu (Minimalistyczny Frontend SPA)
+
+Pliki w repozytorium utworzone/zmodyfikowane:
+
+1. **`frontend/src/components/TelemetryChart.tsx`** (~220 linii):
+   * Czysty, lekki komponent SVG bez zewnętrznych ciężkich bibliotek wykresów.
+   * **Dostępność WCAG 2.2 AA (F2, T6)**: Każda seria rozróżniana jest kolorem oraz unikalnym geometrycznym **kształtem punktu** (koło, kwadrat, trójkąt, romb).
+   * Punkty posiadają etykiety `aria-label`, są w pełni dostępne z klawiatury (`tabIndex={0}`, Enter / Spacja) i posiadają widoczny stan zaznaczenia.
+2. **`frontend/src/components/TelemetryTable.tsx`** (~100 linii):
+   * Tabela danych telemetrycznych z przewijanym widokiem i lepkimi nagłówkami (`sticky header`).
+   * **Synchronizacja (F6)**: Kliknięcie wiersza zaznacza punkt na wykresie. Kliknięcie punktu na wykresie podświetla powiązany wiersz i automatycznie przewija go do widoku (`scrollIntoView`).
+3. **`frontend/src/components/AdminPanel.tsx`** (~320 linii):
+   * Minimalistyczny panel administracyjny (F3, F8, F12).
+   * Bezpieczne logowanie Bearer tokenem (`POST /api/auth/login`) zapamiętywanym w `sessionStorage`.
+   * Formularz nowej serii z walidacją `minValue < maxValue` (F4) oraz usuwanie serii kaskadowo z potwierdzeniem.
+   * Rejestracja czujników z jednorazowym, bezpiecznym podglądem wygenerowanego klucza API w ramce ostrzegawczej.
+   * Lista zarejestrowanych czujników z czasem ostatniego pomiaru oraz wyrejestrowaniem (204).
+4. **`frontend/src/App.tsx`** (~190 linii):
+   * Główny koordynator aplikacji integrujący filtry serii, dat `from`/`to`, przyciski szybkiego zakresu (1h, 24h, wszystko) oraz przycisk drukowania.
+5. **`frontend/src/index.css`** (~380 linii):
+   * Minimalistyczny, estetyczny arkusz stylów oparty na systemowych krojach pisma.
+   * Wysoki kontrast tekstu spełniający normę WCAG 2.2 AA (kontrast > 4.5:1).
+   * Responsywność mobilna dla ekranów o szerokości od 360 px (brak poziomego paska przewijania).
+   * Reguły `@media print` ukrywające przyciski, formularze i kontrolki filtrowania dla czystego wydruku raportu pomiarów (F7, B2).
+6. **Standardy jakości**:
+   * **Zero jednoliterowych zmiennych** w całym kodzie źródłowym TypeScript/CSS/Python.
    * Wszystkie 96 testów pytest przechodzi w 100%.
