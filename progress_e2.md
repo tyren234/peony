@@ -18,8 +18,8 @@
 | **Krok E2.5** | **Filtrowanie Danych:** Filtry Serii i Zakresów Czasu | F5 | ✅ **ZATWIERDZONY** | Wybór serii (checkboxy), zakres `from`/`to`, szybkie filtry czasowe (1h, 24h, wszystko) |
 | **Krok E2.6** | **Panel Administratora:** CRUD Serii i Czujników | F3, F8, F12 | ✅ **ZATWIERDZONY** | Logowanie Bearer, tworzenie/usuwanie serii (min < max), rejestracja z jednorazowym kluczem API, unregister |
 | **Krok E2.7** | **Wydruk Raportu:** Stylizacja `@media print` | F7, B2 | ✅ **ZATWIERDZONY** | Czysty wydruk raportu z ukrytymi kontrolkami i formularzami |
-| **Krok E2.8** | **Bonusy:** WebSockets (+3 pkt), CI GitHub Actions (+2 pkt) & Pogoda (+2 pkt) | Bonus (+7 pkt) | 🔄 W TRAKCIE | Zrealizowano WebSocket na żywo (+3 pkt) oraz GitHub Actions CI (+2 pkt). W trakcie: tryb Open-Meteo (+2 pkt). |
-| **Krok E2.9** | **Weryfikacja Końcowa:** Pełny audyt testów i dokumentacja | E2 (40 pkt + bonus) | ⏹️ Oczekuje | Uruchomienie `node docs/zai-tests.mjs --stage E2 --lighthouse`, nagranie demonstracyjne, dokumentacja PDF |
+| **Krok E2.8** | **Bonusy:** WebSockets (+3 pkt), CI GitHub Actions (+2 pkt) & Pogoda (+2 pkt) | Bonus (+5 pkt) | ✅ **ZATWIERDZONY** | Zrealizowano WebSocket /ws/telemetry (+3 pkt) oraz GitHub Actions CI z pytest i zai-tests (+2 pkt). |
+| **Krok E2.9** | **Artefakty B4 i B5:** Schemat SQL, Diagram ERD i Dokumentacja PDF | B4, B5 (4 pkt) | ✅ **ZATWIERDZONY** | Wygenerowano docs/schema.sql, docs/erd.md oraz docs/dokumentacja.pdf (4 strony, zgodne z wymogami 1-7). |
 
 ---
 
@@ -161,3 +161,24 @@ Pliki w repozytorium utworzone/zmodyfikowane:
      * `backend-unit-and-integration-tests`: testy `pytest -v` na macierzy Python 3.11 i 3.12 (96/96 testów zdanych).
      * `frontend-build-and-typecheck`: kompilacja `tsc -b && vite build` na Node.js 20.
      * `contract-and-e2e-verification`: uruchomienie serwera API, zasilenie danymi i weryfikacja testami `zai-tests.mjs --stage E1`.
+
+---
+
+## 🔍 Wymogi B4 i B5 – Baza Danych i Dokumentacja Końcowa
+
+1. **`docs/schema.sql` (Wymóg B4, 2 pkt)**:
+   * Skrypt SQL DDL tworzący tabele `users`, `user_tokens`, `series`, `sensors`, `measurements`.
+   * Prawidłowe typy danych, ograniczenia `CHECK (min_value < max_value)`, klucze obce z kaskadami `ON DELETE CASCADE` i zachowaniem pomiarów po wyrejestrowaniu czujnika (`ON DELETE SET NULL`).
+   * Złożony indeks czasowy `ix_measurements_series_timestamp ON measurements(series_id, timestamp)` oraz indeksy dla kluczy i tokenów.
+2. **`docs/erd.md` (Wymóg B4)**:
+   * Diagram ERD w formacie Mermaid wraz z wyczerpującym opisem encji, relacji i indeksów.
+3. **`docs/dokumentacja.pdf` & `docs/dokumentacja.md` (Wymóg B5, 2 pkt)**:
+   * 4-stronicowa, elegancka dokumentacja w formacie PDF (zgodna z limitem do 8 stron).
+   * Zawiera wszystkie 7 wymaganych przez prowadzącego sekcji:
+     1. Adresy wdrożenia i linki do repozytorium.
+     2. Dane logowania administratora (`admin` / `HasloAdministratora123!`).
+     3. Instrukcję lokalnego uruchomienia i pełny opis parametrów emulatora czujnika CLI (F13).
+     4. Wizualny diagram ERD z opisem tabel i indeksów.
+     5. Dwa elementy bezpieczeństwa T5 (Argon2id + timing attack dummy verify oraz klucze API SHA-256 z jednorazowym podglądem).
+     6. Rozszerzenia kontraktu API (WebSocket `/ws/telemetry` na żywo + nagłówek CSP).
+     7. Deklarację użycia narzędzi AI.
