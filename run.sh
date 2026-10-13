@@ -252,7 +252,7 @@ echo "--------------------------------------------------------------------------
 echo "💡 Co możesz teraz zrobić w przeglądarce:"
 echo "   1. Otwórz adres powyżej i przeglądaj wykres oraz tabelę (F1, F2)"
 echo "   2. Klikaj punkty na wykresie – wiersz w tabeli podświetli się (F6)"
-echo "   3. Filtruj serie (checkboxy) oraz zakresy czasu (1h, 24h, własne) (F5)"
+echo "   3. Filtruj serie (checkboxy) oraz zakresy czasu (1h, 2h, 3h, 24h, własne) (F5)"
 echo "   4. Zaloguj się jako administrator, dodaj serię lub zarejestruj czujnik (F3, F8, F12)"
 echo "   5. Przetestuj wydruk raportu (Ctrl + P lub przycisk Drukuj) (F7)"
 echo "---------------------------------------------------------------------------"

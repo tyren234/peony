@@ -7,6 +7,15 @@ import { TelemetryTable } from "./components/TelemetryTable";
 import { fetchAllSeries, fetchMeasurements } from "./services/api";
 import type { MeasurementItem, SeriesItem, TelemetryFilterCriteria } from "./types";
 
+function formatLocalDateTimeString(dateObject: Date): string {
+  const yearNumber = dateObject.getFullYear();
+  const monthNumber = String(dateObject.getMonth() + 1).padStart(2, "0");
+  const dayNumber = String(dateObject.getDate()).padStart(2, "0");
+  const hoursNumber = String(dateObject.getHours()).padStart(2, "0");
+  const minutesNumber = String(dateObject.getMinutes()).padStart(2, "0");
+  return `${yearNumber}-${monthNumber}-${dayNumber}T${hoursNumber}:${minutesNumber}`;
+}
+
 export const App: React.FC = () => {
   const [seriesList, setSeriesList] = useState<SeriesItem[]>([]);
   const [measurementsList, setMeasurementsList] = useState<MeasurementItem[]>([]);
@@ -163,14 +172,26 @@ export const App: React.FC = () => {
   };
 
   const handleSetQuickRangeLastHour = () => {
-    const oneHourAgoMoment = new Date(Date.now() - 60 * 60 * 1000);
-    setRangeFromTimestamp(oneHourAgoMoment.toISOString().slice(0, 16));
+    const oneHourAgoMoment = new Date(Date.now() - 1 * 60 * 60 * 1000);
+    setRangeFromTimestamp(formatLocalDateTimeString(oneHourAgoMoment));
+    setRangeToTimestamp("");
+  };
+
+  const handleSetQuickRangeLastTwoHours = () => {
+    const twoHoursAgoMoment = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    setRangeFromTimestamp(formatLocalDateTimeString(twoHoursAgoMoment));
+    setRangeToTimestamp("");
+  };
+
+  const handleSetQuickRangeLastThreeHours = () => {
+    const threeHoursAgoMoment = new Date(Date.now() - 3 * 60 * 60 * 1000);
+    setRangeFromTimestamp(formatLocalDateTimeString(threeHoursAgoMoment));
     setRangeToTimestamp("");
   };
 
   const handleSetQuickRangeLastDay = () => {
-    const oneDayAgoMoment = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    setRangeFromTimestamp(oneDayAgoMoment.toISOString().slice(0, 16));
+    const twentyFourHoursAgoMoment = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    setRangeFromTimestamp(formatLocalDateTimeString(twentyFourHoursAgoMoment));
     setRangeToTimestamp("");
   };
 
@@ -250,6 +271,8 @@ export const App: React.FC = () => {
             <div className="quick-ranges-bar">
               <button onClick={handleSetQuickRangeAll} className="quick-filter-button">Wszystko</button>
               <button onClick={handleSetQuickRangeLastHour} className="quick-filter-button">Ostatnia 1h</button>
+              <button onClick={handleSetQuickRangeLastTwoHours} className="quick-filter-button">Ostatnie 2h</button>
+              <button onClick={handleSetQuickRangeLastThreeHours} className="quick-filter-button">Ostatnie 3h</button>
               <button onClick={handleSetQuickRangeLastDay} className="quick-filter-button">Ostatnie 24h</button>
               <button
                 onClick={() => loadMeasurementsData(false)}
