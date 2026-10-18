@@ -56,3 +56,4 @@ Thumbs.db
 # SSL Certificates
 certs/
 *.pem
+*.zip
