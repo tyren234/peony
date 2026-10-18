@@ -87,10 +87,15 @@ export const App: React.FC = () => {
       return;
     }
 
+    let isEffectCancelled = false;
     let websocketInstance: WebSocket | null = null;
     let reconnectTimeoutIdentifier: ReturnType<typeof setTimeout> | null = null;
 
     const connectToTelemetryWebSocket = () => {
+      if (isEffectCancelled) {
+        return;
+      }
+
       const isSecureConnection = window.location.protocol === "https:";
       const websocketProtocolScheme = isSecureConnection ? "wss:" : "ws:";
       const websocketTargetUrl = `${websocketProtocolScheme}//${window.location.host}/ws/telemetry`;
@@ -99,10 +104,15 @@ export const App: React.FC = () => {
         websocketInstance = new WebSocket(websocketTargetUrl);
 
         websocketInstance.onopen = () => {
-          setIsWebSocketConnected(true);
+          if (!isEffectCancelled) {
+            setIsWebSocketConnected(true);
+          }
         };
 
         websocketInstance.onmessage = (messageEvent) => {
+          if (isEffectCancelled) {
+            return;
+          }
           try {
             const rawIncomingMeasurement: MeasurementItem = JSON.parse(messageEvent.data);
             const normalizedTimestamp =
@@ -130,18 +140,22 @@ export const App: React.FC = () => {
         };
 
         websocketInstance.onclose = () => {
-          setIsWebSocketConnected(false);
-          if (isWebSocketEnabled) {
-            reconnectTimeoutIdentifier = setTimeout(connectToTelemetryWebSocket, 3000);
+          if (isEffectCancelled) {
+            return;
           }
+          setIsWebSocketConnected(false);
+          reconnectTimeoutIdentifier = setTimeout(connectToTelemetryWebSocket, 3000);
         };
 
         websocketInstance.onerror = () => {
+          if (isEffectCancelled) {
+            return;
+          }
           setIsWebSocketConnected(false);
         };
       } catch (connectionError) {
-        setIsWebSocketConnected(false);
-        if (isWebSocketEnabled) {
+        if (!isEffectCancelled) {
+          setIsWebSocketConnected(false);
           reconnectTimeoutIdentifier = setTimeout(connectToTelemetryWebSocket, 3000);
         }
       }
@@ -150,10 +164,14 @@ export const App: React.FC = () => {
     connectToTelemetryWebSocket();
 
     return () => {
+      isEffectCancelled = true;
       if (reconnectTimeoutIdentifier) {
         clearTimeout(reconnectTimeoutIdentifier);
       }
       if (websocketInstance) {
+        websocketInstance.onclose = null;
+        websocketInstance.onerror = null;
+        websocketInstance.onmessage = null;
         websocketInstance.close();
       }
     };
