@@ -314,7 +314,7 @@ export const App: React.FC = () => {
                 disabled={isLoadingData}
                 title="Pobierz najnowsze pomiary z serwera"
               >
-                {isLoadingData ? "Odświeżanie..." : "🔄 Odśwież"}
+                {isLoadingData ? "🔄 Odświeżanie..." : "🔄 Odśwież"}
               </button>
               <button
                 type="button"

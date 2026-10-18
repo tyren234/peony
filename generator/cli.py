@@ -37,6 +37,11 @@ def calculate_measurement_value(
         progress_ratio = float(step_index) / float(max(1, total_steps - 1))
         linear_value = minimum_value + ((maximum_value - minimum_value) * progress_ratio)
         return round(linear_value, 2)
+    
+    if generation_mode == "linear_down":
+        progress_ratio = float(step_index) / float(max(1, total_steps - 1))
+        linear_value = maximum_value - ((maximum_value - minimum_value) * progress_ratio)
+        return round(linear_value, 2)
 
     if generation_mode == "constant":
         return round(constant_value, 2)
@@ -220,7 +225,7 @@ def create_cli_argument_parser() -> argparse.ArgumentParser:
     argument_parser.add_argument(
         "--mode",
         dest="generation_mode",
-        choices=["sine", "random", "linear", "constant", "out-of-range"],
+        choices=["sine", "random", "linear", "linear_down", "constant", "out-of-range"],
         default="sine",
         help="Sposób generowania wartości pomiarów",
     )
