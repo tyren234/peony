@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { AdminPanel } from "./components/AdminPanel";
+import { DateTime24Input } from "./components/DateTime24Input";
 import { TelemetryChart } from "./components/TelemetryChart";
 import { TelemetryTable } from "./components/TelemetryTable";
 import { fetchAllSeries, fetchMeasurements } from "./services/api";
@@ -262,24 +263,20 @@ export const App: React.FC = () => {
           </div>
 
           <div className="time-filter-group">
-            <div className="datetime-input-wrapper">
-              <label htmlFor="filter-from-datetime">Od (from):</label>
-              <input
-                id="filter-from-datetime"
-                type="datetime-local"
-                value={rangeFromTimestamp}
-                onChange={(changeEvent) => setRangeFromTimestamp(changeEvent.target.value)}
-              />
-            </div>
-            <div className="datetime-input-wrapper">
-              <label htmlFor="filter-to-datetime">Do (to):</label>
-              <input
-                id="filter-to-datetime"
-                type="datetime-local"
-                value={rangeToTimestamp}
-                onChange={(changeEvent) => setRangeToTimestamp(changeEvent.target.value)}
-              />
-            </div>
+            <DateTime24Input
+              inputIdentifier="filter-from-datetime"
+              fieldLabel="Od (from):"
+              currentIsoValue={rangeFromTimestamp}
+              onValueChange={setRangeFromTimestamp}
+              defaultTimeValue="00:00"
+            />
+            <DateTime24Input
+              inputIdentifier="filter-to-datetime"
+              fieldLabel="Do (to):"
+              currentIsoValue={rangeToTimestamp}
+              onValueChange={setRangeToTimestamp}
+              defaultTimeValue="23:59"
+            />
             <div className="quick-ranges-bar">
               <button onClick={handleSetQuickRangeAll} className="quick-filter-button">Wszystko</button>
               <button onClick={handleSetQuickRangeLastHour} className="quick-filter-button">Ostatnia 1h</button>
