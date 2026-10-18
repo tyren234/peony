@@ -99,7 +99,19 @@ export const App: React.FC = () => {
 
         websocketInstance.onmessage = (messageEvent) => {
           try {
-            const incomingMeasurement: MeasurementItem = JSON.parse(messageEvent.data);
+            const rawIncomingMeasurement: MeasurementItem = JSON.parse(messageEvent.data);
+            const normalizedTimestamp =
+              rawIncomingMeasurement.timestamp.endsWith("Z") ||
+              rawIncomingMeasurement.timestamp.includes("+") ||
+              rawIncomingMeasurement.timestamp.lastIndexOf("-") > 10
+                ? rawIncomingMeasurement.timestamp
+                : `${rawIncomingMeasurement.timestamp}Z`;
+
+            const incomingMeasurement: MeasurementItem = {
+              ...rawIncomingMeasurement,
+              timestamp: normalizedTimestamp,
+            };
+
             setMeasurementsList((previousList) => {
               if (previousList.some((existingItem) => existingItem.id === incomingMeasurement.id)) {
                 return previousList;

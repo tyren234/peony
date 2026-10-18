@@ -231,15 +231,10 @@ async def create_measurement(
     database_session.refresh(new_measurement)
 
     response.headers["Location"] = f"/api/measurements/{new_measurement.id}"
-    await telemetry_broadcaster.broadcast_measurement(
-        {
-            "id": new_measurement.id,
-            "seriesId": new_measurement.series_id,
-            "sensorId": new_measurement.sensor_id,
-            "value": new_measurement.value,
-            "timestamp": new_measurement.timestamp.isoformat(),
-        }
-    )
+    serialized_measurement_payload = MeasurementResponse.model_validate(
+        new_measurement
+    ).model_dump(by_alias=True, mode="json")
+    await telemetry_broadcaster.broadcast_measurement(serialized_measurement_payload)
     return new_measurement
 
 
