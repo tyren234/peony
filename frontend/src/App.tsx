@@ -180,6 +180,12 @@ export const App: React.FC = () => {
     setRangeToTimestamp("");
   };
 
+  const handleSetQuickRangeLastFifteenMinutes = () => {
+    const fifteenMinutesAgoMoment = new Date(Date.now() - 15 * 60 * 1000);
+    setRangeFromTimestamp(formatLocalDateTimeString(fifteenMinutesAgoMoment));
+    setRangeToTimestamp("");
+  };
+
   const handleSetQuickRangeLastHour = () => {
     const oneHourAgoMoment = new Date(Date.now() - 1 * 60 * 60 * 1000);
     setRangeFromTimestamp(formatLocalDateTimeString(oneHourAgoMoment));
@@ -279,6 +285,7 @@ export const App: React.FC = () => {
             </div>
             <div className="quick-ranges-bar">
               <button onClick={handleSetQuickRangeAll} className="quick-filter-button">Wszystko</button>
+              <button onClick={handleSetQuickRangeLastFifteenMinutes} className="quick-filter-button">Ostatnie 15 min</button>
               <button onClick={handleSetQuickRangeLastHour} className="quick-filter-button">Ostatnia 1h</button>
               <button onClick={handleSetQuickRangeLastTwoHours} className="quick-filter-button">Ostatnie 2h</button>
               <button onClick={handleSetQuickRangeLastThreeHours} className="quick-filter-button">Ostatnie 3h</button>
