@@ -27,7 +27,6 @@ export const App: React.FC = () => {
   const [applicationErrorMessage, setApplicationErrorMessage] = useState<string>("");
   const [lastRefreshedTime, setLastRefreshedTime] = useState<string>("");
   const [isWebSocketConnected, setIsWebSocketConnected] = useState<boolean>(false);
-  const [isAutoRefreshActive, setIsAutoRefreshActive] = useState<boolean>(true);
 
   const loadSeriesData = async () => {
     try {
@@ -150,19 +149,7 @@ export const App: React.FC = () => {
     };
   }, []);
 
-  // Automatyczne odpytywanie serwera co 30 sekund jako mechanizm awaryjny
-  useEffect(() => {
-    if (!isAutoRefreshActive) {
-      return;
-    }
-    const autoRefreshIntervalIdentifier = setInterval(() => {
-      loadMeasurementsData(true);
-    }, 30000);
 
-    return () => {
-      clearInterval(autoRefreshIntervalIdentifier);
-    };
-  }, [isAutoRefreshActive, selectedSeriesIdentifiers, rangeFromTimestamp, rangeToTimestamp]);
 
   const handleToggleSeriesSelection = (seriesIdentifier: number) => {
     setSelectedSeriesIdentifiers((previousSelectedIdentifiers) => {
@@ -294,14 +281,7 @@ export const App: React.FC = () => {
               >
                 {isLoadingData ? "Odświeżanie..." : "🔄 Odśwież"}
               </button>
-              <label className="auto-refresh-toggle-label">
-                <input
-                  type="checkbox"
-                  checked={isAutoRefreshActive}
-                  onChange={(toggleChangeEvent) => setIsAutoRefreshActive(toggleChangeEvent.target.checked)}
-                />
-                <span>Auto-odświeżanie (30s)</span>
-              </label>
+
               {isWebSocketConnected && (
                 <span className="live-status-badge">
                   🟢 Na żywo (WebSocket)
