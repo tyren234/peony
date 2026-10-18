@@ -230,14 +230,35 @@ button {
   margin-left: 0.25rem;
 }
 
-.auto-refresh-toggle-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: 0.8rem;
-  color: var(--color-text-main);
+.websocket-toggle-button {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.85rem;
+  border-radius: 4px;
   cursor: pointer;
-  margin-left: 0.25rem;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.websocket-toggle-button.websocket-active {
+  color: #991b1b;
+  border-color: #fca5a5;
+  background-color: #fef2f2;
+}
+
+.websocket-toggle-button.websocket-active:hover {
+  background-color: #fee2e2;
+}
+
+.websocket-toggle-button.websocket-inactive {
+  color: #166534;
+  border-color: #86efac;
+  background-color: #f0fdf4;
+}
+
+.websocket-toggle-button.websocket-inactive:hover {
+  background-color: #dcfce7;
 }
 
 

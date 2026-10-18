@@ -27,6 +27,7 @@ export const App: React.FC = () => {
   const [applicationErrorMessage, setApplicationErrorMessage] = useState<string>("");
   const [lastRefreshedTime, setLastRefreshedTime] = useState<string>("");
   const [isWebSocketConnected, setIsWebSocketConnected] = useState<boolean>(false);
+  const [isWebSocketEnabled, setIsWebSocketEnabled] = useState<boolean>(true);
 
   const loadSeriesData = async () => {
     try {
@@ -79,8 +80,13 @@ export const App: React.FC = () => {
     }
   }, [seriesList, selectedSeriesIdentifiers, rangeFromTimestamp, rangeToTimestamp]);
 
-  // Połączenie WebSocket dla natychmiastowej aktualizacji na żywo (wymóg bonusowy)
+  // Połączenie WebSocket dla natychmiastowej aktualizacji na żywo (kontrolowane przyciskiem)
   useEffect(() => {
+    if (!isWebSocketEnabled) {
+      setIsWebSocketConnected(false);
+      return;
+    }
+
     let websocketInstance: WebSocket | null = null;
     let reconnectTimeoutIdentifier: ReturnType<typeof setTimeout> | null = null;
 
@@ -125,7 +131,9 @@ export const App: React.FC = () => {
 
         websocketInstance.onclose = () => {
           setIsWebSocketConnected(false);
-          reconnectTimeoutIdentifier = setTimeout(connectToTelemetryWebSocket, 3000);
+          if (isWebSocketEnabled) {
+            reconnectTimeoutIdentifier = setTimeout(connectToTelemetryWebSocket, 3000);
+          }
         };
 
         websocketInstance.onerror = () => {
@@ -133,7 +141,9 @@ export const App: React.FC = () => {
         };
       } catch (connectionError) {
         setIsWebSocketConnected(false);
-        reconnectTimeoutIdentifier = setTimeout(connectToTelemetryWebSocket, 3000);
+        if (isWebSocketEnabled) {
+          reconnectTimeoutIdentifier = setTimeout(connectToTelemetryWebSocket, 3000);
+        }
       }
     };
 
@@ -147,7 +157,7 @@ export const App: React.FC = () => {
         websocketInstance.close();
       }
     };
-  }, []);
+  }, [isWebSocketEnabled]);
 
 
 
@@ -280,6 +290,14 @@ export const App: React.FC = () => {
                 title="Pobierz najnowsze pomiary z serwera"
               >
                 {isLoadingData ? "Odświeżanie..." : "🔄 Odśwież"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsWebSocketEnabled((previousState) => !previousState)}
+                className={`websocket-toggle-button ${isWebSocketEnabled ? "websocket-active" : "websocket-inactive"}`}
+                title={isWebSocketEnabled ? "Kliknij, aby wyłączyć WebSocket" : "Kliknij, aby włączyć WebSocket"}
+              >
+                {isWebSocketEnabled ? "Kliknij, aby wyłączyć WebSocket" : "Kliknij, aby włączyć WebSocket"}
               </button>
 
               {isWebSocketConnected && (
