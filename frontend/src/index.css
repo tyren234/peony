@@ -205,60 +205,6 @@ button {
   font-size: 0.85rem;
 }
 
-.datetime-24-composite-control {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.datetime-date-picker-input {
-  padding: 0.4rem 0.5rem;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  background-color: var(--color-surface);
-  color: var(--color-text-primary);
-  font-size: 0.85rem;
-  font-family: inherit;
-}
-
-.time-24-subcontrol-wrapper {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-}
-
-.datetime-time-24-input {
-  width: 5.6rem;
-  padding: 0.4rem 1.8rem 0.4rem 0.55rem;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  background-color: var(--color-surface);
-  color: var(--color-text-primary);
-  font-size: 0.85rem;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-  font-family: inherit;
-}
-
-.datetime-time-24-input:focus,
-.datetime-date-picker-input:focus {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 1px;
-}
-
-.time-format-hint-badge {
-  position: absolute;
-  right: 0.35rem;
-  font-size: 0.65rem;
-  font-weight: 700;
-  color: #475569;
-  background-color: #e2e8f0;
-  padding: 0.1rem 0.25rem;
-  border-radius: 3px;
-  pointer-events: none;
-  letter-spacing: 0.02em;
-}
-
 .quick-ranges-bar {
   display: flex;
   align-items: center;
