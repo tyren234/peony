@@ -34,8 +34,8 @@ Projekt posiada zintegrowany skrypt uruchomieniowy `./run.sh` (automatycznie kon
 
 ## 🛠️ Architektura i Technologie
 
-* **Backend:** Python 3.14, **FastAPI**, **Pydantic v2** (pełna zgodność z OpenAPI 3.1 i RFC 9457 Problem Details).
-* **Baza danych:** **SQLAlchemy 2.0** + **SQLite** / **PostgreSQL** (klucze obce, kaskady, indeksy czasowe).
+* **Backend:** Python 3.14, **FastAPI**, **Pydantic v2**
+* **Baza danych:** **SQLAlchemy 2.0** + **SQLite** (`waterdeep.db`, pełna obsługa kluczy obcych z `PRAGMA foreign_keys=ON`, kaskady i indeksy złożone).
 * **Frontend:** **React 19**, **TypeScript**, **Vite** – dostępność WCAG 2.2 AA (rozróżnienie serii kolorem i kształtem punktu, Lighthouse 100/100, RWD ~360px, czysty wydruk `@media print`).
 * **Real-time:** Transmisja na żywo przez **WebSocket** (`/ws/telemetry`) z możliwością włączania/wyłączania w interfejsie.
 * **Bezpieczeństwo:**
