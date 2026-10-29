@@ -11,8 +11,7 @@ Aplikacja do zbierania, analizy i wizualizacji pomiarów telemetrycznych w czasi
 * **Konto administratora:**
   * Login: `admin`
   * Hasło: `HasloAdministratora123!`
-* **Dokumentacja techniczna:** [`docs/dokumentacja.pdf`](docs/dokumentacja.pdf) (4 strony, zgodna z wymogami projektu)
-* **Schemat bazy & ERD:** [`docs/schema.sql`](docs/schema.sql), [`docs/erd.md`](docs/erd.md)
+* **Schemat bazy danych:** [`docs/schema.sql`](docs/schema.sql)
 
 ---
 
