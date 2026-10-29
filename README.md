@@ -35,12 +35,12 @@ Projekt posiada zintegrowany skrypt uruchomieniowy `./run.sh` (automatycznie kon
 ## 🛠️ Architektura i Technologie
 
 * **Backend:** Python 3.14, **FastAPI**, **Pydantic v2**
-* **Baza danych:** **SQLAlchemy 2.0** + **SQLite** (`waterdeep.db`, pełna obsługa kluczy obcych z `PRAGMA foreign_keys=ON`, kaskady i indeksy złożone).
-* **Frontend:** **React 19**, **TypeScript**, **Vite** – dostępność WCAG 2.2 AA (rozróżnienie serii kolorem i kształtem punktu, Lighthouse 100/100, RWD ~360px, czysty wydruk `@media print`).
+* **Baza danych:** **SQLAlchemy 2.0** + **SQLite**
+* **Frontend:** **React 19**, **TypeScript**, **Vite**
 * **Real-time:** Transmisja na żywo przez **WebSocket** (`/ws/telemetry`) z możliwością włączania/wyłączania w interfejsie.
 * **Bezpieczeństwo:**
-  * Hasła haszowane **Argon2id** (`argon2-cffi`) z ochroną przed timing-attacks.
-  * Klucze czujników (min. 32 znaki) zapisywane w bazie **wyłącznie jako skrót SHA-256**.
+  * Hasła haszowane **Argon2id** z losową "solą".
+  * Klucze czujników zapisywane w bazie **wyłącznie jako SHA-256**.
   * Sesja tokenami Bearer z unieważnianiem przy wylogowaniu.
   * Nagłówki `Content-Security-Policy` oraz `X-Content-Type-Options: nosniff`.
 
@@ -53,7 +53,7 @@ Projekt posiada zintegrowany skrypt uruchomieniowy `./run.sh` (automatycznie kon
 pytest -v
 ```
 
-### 2. Weryfikacja oficjalnym skryptem prowadzącego (`zai-tests.mjs`)
+### 2. Weryfikacja skryptem (`zai-tests.mjs`)
 
 ```bash
 # Test Etapu E1 (Kontrakt & Walidacja):
